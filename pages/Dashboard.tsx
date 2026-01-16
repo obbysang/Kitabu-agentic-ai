@@ -3,9 +3,9 @@ import {
   Bot, Send, Wallet, Activity, Clock, CheckCircle, 
   AlertTriangle, FileText, TrendingUp, ShieldCheck, 
   ChevronRight, ArrowRight, Loader2, X, UploadCloud,
-  Code, Users, Sparkles, Zap
+  Code, Users, Sparkles, Zap, Settings, Lock
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area } from 'recharts';
 import gsap from 'gsap';
 
 interface Message {
@@ -49,6 +49,16 @@ const Dashboard: React.FC = () => {
     { name: 'USDC', value: 45000, color: '#3B82F6', icon: '$' },
     { name: 'CRO', value: 15000, color: '#10B981', icon: 'C' },
     { name: 'VVS', value: 5000, color: '#F59E0B', icon: 'V' },
+  ];
+  
+  const projectionData = [
+    { day: 'Mon', balance: 65000 },
+    { day: 'Tue', balance: 65400 },
+    { day: 'Wed', balance: 65100 }, 
+    { day: 'Thu', balance: 66200 }, 
+    { day: 'Fri', balance: 66800 },
+    { day: 'Sat', balance: 67100 },
+    { day: 'Sun', balance: 67500 },
   ];
 
   const activities = [
@@ -124,22 +134,29 @@ const Dashboard: React.FC = () => {
                 <p className="text-gray-500 mt-1">Agentic Treasury Management & x402 Execution Rails</p>
             </div>
             
-            {/* Safety Guardrails Widget */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-6 min-w-[300px]">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
-                        <ShieldCheck size={20} />
+            <div className="flex items-center gap-4">
+                {/* Admin / Settings Control */}
+                 <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 text-xs font-medium transition-colors">
+                     <Settings size={16} /> Admin Panel
+                 </button>
+
+                {/* Safety Guardrails Widget */}
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-6 min-w-[280px]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
+                            <ShieldCheck size={20} />
+                        </div>
+                        <div>
+                            <div className="text-xs font-semibold text-gray-400 uppercase">Daily Spend</div>
+                            <div className="text-sm font-bold text-slate-900">${dailySpend.toLocaleString()} <span className="text-gray-400 font-normal">/ 5k</span></div>
+                        </div>
                     </div>
-                    <div>
-                        <div className="text-xs font-semibold text-gray-400 uppercase">Daily Spend Limit</div>
-                        <div className="text-sm font-bold text-slate-900">${dailySpend.toLocaleString()} <span className="text-gray-400 font-normal">/ ${dailyLimit.toLocaleString()}</span></div>
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                            className={`h-full rounded-full ${dailySpend > dailyLimit * 0.8 ? 'bg-red-500' : 'bg-blue-500'}`} 
+                            style={{width: `${(dailySpend / dailyLimit) * 100}%`}}
+                        ></div>
                     </div>
-                </div>
-                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                        className={`h-full rounded-full ${dailySpend > dailyLimit * 0.8 ? 'bg-red-500' : 'bg-blue-500'}`} 
-                        style={{width: `${(dailySpend / dailyLimit) * 100}%`}}
-                    ></div>
                 </div>
             </div>
         </header>
@@ -157,15 +174,18 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div>
                             <div className="font-bold text-slate-900">Kitabu Agent</div>
-                            <div className="text-xs text-blue-600 flex items-center gap-1">
+                            <div className="text-xs text-blue-600 flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 w-fit">
                                 <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse"></span> 
                                 x402 Session Active
                             </div>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                         <button className="p-2 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors">
-                             <Activity size={20} />
+                         <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors" title="Lock Session">
+                             <Lock size={18} />
+                         </button>
+                         <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors" title="Activity Log">
+                             <Activity size={18} />
                          </button>
                     </div>
                 </div>
@@ -354,6 +374,35 @@ const Dashboard: React.FC = () => {
                                 </div>
                             </div>
                         ))}
+                    </div>
+
+                    {/* NEW: Projection Chart */}
+                    <div className="mt-6 pt-6 border-t border-slate-100">
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">7-Day Projection</h4>
+                            <span className="text-xs font-bold text-green-500 flex items-center gap-1 bg-green-50 px-2 py-1 rounded-full">
+                                <TrendingUp size={12} /> +3.8%
+                            </span>
+                        </div>
+                        <div className="h-24 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={projectionData}>
+                                    <defs>
+                                        <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
+                                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <Tooltip 
+                                        contentStyle={{backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '12px', padding: '8px'}}
+                                        itemStyle={{color: '#fff'}}
+                                        cursor={{stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4'}}
+                                        formatter={(value: number) => [`$${value.toLocaleString()}`, 'Balance']}
+                                    />
+                                    <Area type="monotone" dataKey="balance" stroke="#3B82F6" strokeWidth={2} fillOpacity={1} fill="url(#colorBalance)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
                 </div>
 

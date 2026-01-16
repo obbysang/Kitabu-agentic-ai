@@ -1,11 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Brain, TrendingUp, ShieldAlert, Server, Zap } from 'lucide-react';
+import gsap from 'gsap';
 
 const Intelligence: React.FC = () => {
+  
+  useEffect(() => {
+    gsap.fromTo('.anim-card',
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: 'power2.out' }
+    );
+  }, []);
+
   return (
     <div className="pt-24 min-h-screen bg-white pb-12">
       <div className="max-w-5xl mx-auto px-6">
-        <header className="mb-12 text-center">
+        <header className="mb-12 text-center anim-card opacity-0">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-2xl mb-6 text-blue-600">
                 <Brain size={32} />
             </div>
@@ -18,7 +27,7 @@ const Intelligence: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             
             {/* Market Data Integration */}
-            <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200 relative overflow-hidden group">
+            <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200 relative overflow-hidden group anim-card opacity-0 hover:border-blue-200 transition-colors">
                 <div className="absolute top-0 right-0 p-4 opacity-50">
                     <Server className="text-slate-300" size={100} />
                 </div>
@@ -49,7 +58,7 @@ const Intelligence: React.FC = () => {
             </div>
 
             {/* Safety Guardrails */}
-            <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200 relative overflow-hidden">
+            <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200 relative overflow-hidden anim-card opacity-0 hover:border-orange-200 transition-colors">
                 <div className="absolute top-0 right-0 p-4 opacity-50">
                     <ShieldAlert className="text-slate-300" size={100} />
                 </div>
@@ -73,7 +82,7 @@ const Intelligence: React.FC = () => {
         </div>
 
         {/* Idle Cash Section */}
-        <div className="bg-[#0B0F15] rounded-[2.5rem] p-10 text-white relative overflow-hidden">
+        <div className="bg-[#0B0F15] rounded-[2.5rem] p-10 text-white relative overflow-hidden anim-card opacity-0">
              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
              <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
                  <div className="flex-1">

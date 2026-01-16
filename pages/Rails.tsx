@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layers, Key, Users, Check, ArrowRight, Wallet } from 'lucide-react';
+import gsap from 'gsap';
 
 const Rails: React.FC = () => {
   const [sessionActive, setSessionActive] = useState(false);
@@ -11,11 +12,18 @@ const Rails: React.FC = () => {
 
   const addRow = () => setRows([...rows, { address: '', amount: '' }]);
 
+  useEffect(() => {
+    gsap.fromTo('.anim-card',
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: 'power2.out' }
+    );
+  }, []);
+
   return (
     <div className="pt-24 min-h-screen bg-slate-50 pb-12">
       <div className="max-w-6xl mx-auto px-6">
         
-        <header className="mb-12">
+        <header className="mb-12 anim-card opacity-0">
              <div className="flex items-center gap-3 mb-2">
                  <div className="p-2 bg-purple-100 text-purple-600 rounded-lg"><Layers size={24} /></div>
                  <h1 className="text-3xl font-bold text-slate-900">x402 Payment Rails</h1>
@@ -28,7 +36,7 @@ const Rails: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             {/* Left: Smart Session Card */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 h-fit">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 h-fit anim-card opacity-0 hover:border-purple-300 transition-colors">
                 <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                     <Key size={18} className="text-purple-600" /> Smart Session
                 </h3>
@@ -60,7 +68,7 @@ const Rails: React.FC = () => {
             </div>
 
             {/* Right: Batch Payroll Tool */}
-            <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+            <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-slate-200 anim-card opacity-0">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                         <Users size={20} className="text-blue-500" /> Batch Payroll
@@ -110,7 +118,7 @@ const Rails: React.FC = () => {
         </div>
 
         {/* Diagram section */}
-        <div className="mt-12 p-8 bg-slate-900 rounded-3xl text-white relative overflow-hidden">
+        <div className="mt-12 p-8 bg-slate-900 rounded-3xl text-white relative overflow-hidden anim-card opacity-0">
              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
                  <div className="max-w-md">
                      <h3 className="text-2xl font-bold mb-4">Gas Abstraction</h3>

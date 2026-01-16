@@ -1,10 +1,18 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Upload, CheckCircle, Loader2, ArrowRight } from 'lucide-react';
+import gsap from 'gsap';
 
 const RWAInvoices: React.FC = () => {
   const [dragActive, setDragActive] = useState(false);
   const [status, setStatus] = useState<'idle' | 'uploading' | 'parsing' | 'complete'>('idle');
   const [result, setResult] = useState<{address: string, amount: string} | null>(null);
+
+  useEffect(() => {
+    gsap.fromTo('.anim-card',
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: 'power2.out' }
+    );
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -42,12 +50,12 @@ const RWAInvoices: React.FC = () => {
   return (
     <div className="pt-24 min-h-screen bg-slate-50 pb-12">
       <div className="max-w-4xl mx-auto px-6">
-        <header className="text-center mb-12">
+        <header className="text-center mb-12 anim-card opacity-0">
             <h1 className="text-3xl font-bold text-slate-900 mb-2">RWA Invoice Settlement</h1>
             <p className="text-gray-500">Upload a PDF invoice. The AI will extract the payment details for x402 settlement.</p>
         </header>
 
-        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden anim-card opacity-0">
             <div className="grid grid-cols-1 md:grid-cols-2">
                 
                 {/* Upload Area */}
