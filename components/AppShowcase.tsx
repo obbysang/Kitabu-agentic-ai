@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ArrowRight, MessageSquare, Bot, Wallet, FileText, Zap, Brain } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import gsap from 'gsap';
 
 const data = [
   { name: 'USDC', value: 45000, color: '#3B82F6' },
@@ -9,6 +10,43 @@ const data = [
 ];
 
 const AppShowcase: React.FC = () => {
+  const phoneRef = useRef(null);
+  const nodesRef = useRef<HTMLDivElement[]>([]);
+
+  const addToNodesRef = (el: HTMLDivElement | null) => {
+    if (el && !nodesRef.current.includes(el)) {
+      nodesRef.current.push(el);
+    }
+  };
+
+  useEffect(() => {
+    // Phone Entrance
+    gsap.fromTo(phoneRef.current,
+      { y: 100, opacity: 0, rotateX: 10 },
+      { y: 0, opacity: 1, rotateX: 0, duration: 1.2, ease: "power3.out", delay: 0.2 }
+    );
+
+    // Nodes Entrance & Float
+    nodesRef.current.forEach((node, i) => {
+        // Entrance
+        gsap.fromTo(node,
+           { scale: 0, opacity: 0 },
+           { scale: 1, opacity: 1, duration: 0.6, ease: "back.out(1.5)", delay: 0.5 + (i * 0.2) }
+        );
+
+        // Float loop
+        gsap.to(node, {
+            y: -15,
+            duration: 3 + i,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut",
+            delay: 1.5
+        });
+    });
+
+  }, []);
+
   return (
     <section className="relative py-32 bg-slate-50 overflow-hidden">
       {/* Background Circuit Pattern */}
@@ -35,15 +73,15 @@ const AppShowcase: React.FC = () => {
         </div>
 
         {/* Central visual container */}
-        <div className="relative w-full max-w-5xl h-[700px] flex justify-center items-center">
+        <div className="relative w-full max-w-5xl h-[700px] flex justify-center items-center perspective-1000">
           
           {/* Floating Feature Icons */}
-          <FloatingNode icon={<Brain size={24} />} label="AI Agent" top="10%" left="10%" delay="0s" />
-          <FloatingNode icon={<FileText size={24} />} label="Invoice Parsing" top="25%" left="0%" delay="1s" />
-          <FloatingNode icon={<Zap size={24} />} label="x402 Rails" top="15%" right="10%" delay="0.5s" />
+          <FloatingNode ref={addToNodesRef} icon={<Brain size={24} />} label="AI Agent" top="10%" left="10%" />
+          <FloatingNode ref={addToNodesRef} icon={<FileText size={24} />} label="Invoice Parsing" top="25%" left="0%" />
+          <FloatingNode ref={addToNodesRef} icon={<Zap size={24} />} label="x402 Rails" top="15%" right="10%" />
           
           {/* Phone Mockup - Changed to a wider "Dashboard" tablet/mobile view */}
-          <div className="relative w-[360px] md:w-[400px] h-[700px] bg-black rounded-[3rem] border-8 border-slate-800 shadow-2xl overflow-hidden z-20">
+          <div ref={phoneRef} className="relative w-[360px] md:w-[400px] h-[700px] bg-black rounded-[3rem] border-8 border-slate-800 shadow-2xl overflow-hidden z-20 opacity-0 transform-gpu">
              {/* Notch */}
              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-800 rounded-b-xl z-30"></div>
              
@@ -161,14 +199,18 @@ const AppShowcase: React.FC = () => {
   );
 };
 
-const FloatingNode = ({ icon, label, top, left, right, delay }: { icon: React.ReactNode, label: string, top: string, left?: string, right?: string, delay: string }) => (
+// Forward Ref for nodes
+const FloatingNode = React.forwardRef<HTMLDivElement, { icon: React.ReactNode, label: string, top: string, left?: string, right?: string }>(
+  ({ icon, label, top, left, right }, ref) => (
     <div 
-        className="absolute bg-white p-3 rounded-xl shadow-xl border border-slate-100 flex items-center gap-3 animate-float hidden md:flex"
-        style={{ top, left, right, animationDelay: delay }}
+        ref={ref}
+        className="absolute bg-white p-3 rounded-xl shadow-xl border border-slate-100 flex items-center gap-3 hidden md:flex opacity-0"
+        style={{ top, left, right }}
     >
         <div className="text-blue-600">{icon}</div>
         <span className="text-xs font-semibold text-slate-700">{label}</span>
     </div>
+  )
 );
 
 export default AppShowcase;

@@ -6,6 +6,7 @@ import {
   Code, Users, Sparkles, Zap
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import gsap from 'gsap';
 
 interface Message {
   id: string;
@@ -63,6 +64,14 @@ const Dashboard: React.FC = () => {
     }
   }, [messages]);
 
+  // Entrance Animations
+  useEffect(() => {
+    gsap.fromTo('.dashboard-card',
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: 'power2.out' }
+    );
+  }, []);
+
   const handleSend = () => {
     if (!input.trim()) return;
     
@@ -107,7 +116,7 @@ const Dashboard: React.FC = () => {
       <div className="max-w-[1400px] mx-auto px-6">
         
         {/* Header Area */}
-        <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 dashboard-card opacity-0">
             <div>
                 <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
                     CFO Command Center <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-mono">v2.4.0</span>
@@ -138,7 +147,7 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-200px)] min-h-[800px]">
             
             {/* LEFT COLUMN: AI Chat Interface (The Brain) */}
-            <div className="lg:col-span-8 bg-white rounded-3xl shadow-sm border border-slate-200 flex flex-col overflow-hidden relative">
+            <div className="lg:col-span-8 bg-white rounded-3xl shadow-sm border border-slate-200 flex flex-col overflow-hidden relative dashboard-card opacity-0">
                 
                 {/* Chat Header */}
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 backdrop-blur-sm z-10">
@@ -302,7 +311,7 @@ const Dashboard: React.FC = () => {
             <div className="lg:col-span-4 flex flex-col gap-6 overflow-y-auto pr-1 h-full">
                 
                 {/* 1. Treasury Overview Card */}
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 dashboard-card opacity-0">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="font-bold text-slate-900 flex items-center gap-2">
                             <Wallet size={18} className="text-gray-400" /> Treasury
@@ -349,7 +358,7 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* 2. VVS Yield Ticker (DeFi Integration) */}
-                <div className="bg-gradient-to-br from-[#0B0F19] to-[#1a1f2e] p-6 rounded-3xl shadow-sm border border-slate-800 text-white relative overflow-hidden group">
+                <div className="bg-gradient-to-br from-[#0B0F19] to-[#1a1f2e] p-6 rounded-3xl shadow-sm border border-slate-800 text-white relative overflow-hidden group dashboard-card opacity-0">
                     <div className="absolute top-0 right-0 p-20 bg-blue-500/10 blur-3xl rounded-full -mr-10 -mt-10"></div>
                     <div className="relative z-10">
                         <div className="flex justify-between items-start mb-4">
@@ -372,7 +381,7 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* 3. Invoice Dropzone (RWA) */}
-                <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer group">
+                <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer group dashboard-card opacity-0">
                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm group-hover:scale-110 transition-transform">
                         <UploadCloud size={24} className="text-blue-500" />
                     </div>
@@ -384,7 +393,7 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* 4. Activity Feed */}
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex-1">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex-1 dashboard-card opacity-0">
                      <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
                         <Activity size={18} className="text-gray-400" /> Live Feed
                     </h3>

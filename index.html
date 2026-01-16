@@ -21,6 +21,20 @@
                 accent: '#A3E635', 
                 light: '#F3F4F6'
               }
+            },
+            animation: {
+              'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+              'float': 'float 6s ease-in-out infinite',
+            },
+            keyframes: {
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-20px)' },
+              }
             }
           }
         }
@@ -48,7 +62,8 @@
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
     "recharts": "https://esm.sh/recharts@^3.6.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "gsap": "https://esm.sh/gsap@3.12.5"
   }
 }
 </script>
