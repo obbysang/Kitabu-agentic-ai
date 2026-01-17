@@ -1,24 +1,16 @@
 {
-  "name": "kitabu---ai-cfo-dashboard",
+  "name": "kitabu-monorepo",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev:web": "npm run dev -w kitabu---ai-cfo-dashboard",
+    "dev:api": "npm run dev -w @kitabu/api",
+    "build": "npm run build --workspaces"
   },
   "dependencies": {
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "recharts": "^3.6.0",
-    "lucide-react": "^0.562.0",
-    "gsap": "3.12.5"
-  },
-  "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "viem": "^2.44.4"
   }
 }

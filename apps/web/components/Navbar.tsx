@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Menu, X, Bot, Bell, ChevronDown, ExternalLink, Search } from 'lucide-react';
+import { ConnectKitButton } from 'connectkit';
 
 interface NavbarProps {
   onNavigate?: (page: string) => void;
@@ -107,23 +108,46 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage = 'home' }) => 
                 </button>
                 
                 {/* Connected Wallet Badge */}
-                <button className="flex items-center gap-2.5 bg-slate-900 text-white pl-3 pr-4 py-2 rounded-full text-sm font-medium hover:bg-slate-800 transition-all hover:shadow-lg hover:shadow-slate-200 cursor-pointer">
-                    <div className="relative">
-                        <div className="w-2.5 h-2.5 bg-green-400 rounded-full"></div>
-                        <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-75"></div>
-                    </div>
-                    <span className="font-mono tracking-tight">0x14...9A2</span>
-                    <ChevronDown size={14} className="text-gray-400" />
-                </button>
+                <ConnectKitButton.Custom>
+                  {({ isConnected, show, truncatedAddress, ensName }) => (
+                    <button 
+                      onClick={show}
+                      className={`flex items-center gap-2.5 ${isConnected ? 'bg-slate-900 text-white pl-3 pr-4 py-2' : 'bg-blue-600 text-white px-5 py-2.5'} rounded-full text-sm font-medium hover:opacity-90 transition-all hover:shadow-lg cursor-pointer`}
+                    >
+                      {isConnected ? (
+                        <>
+                          <div className="relative">
+                              <div className="w-2.5 h-2.5 bg-green-400 rounded-full"></div>
+                              <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-75"></div>
+                          </div>
+                          <span className="font-mono tracking-tight">{ensName ?? truncatedAddress}</span>
+                          <ChevronDown size={14} className="text-gray-400" />
+                        </>
+                      ) : (
+                        <>
+                          Connect Wallet
+                          <ArrowRight size={16} />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </ConnectKitButton.Custom>
              </div>
           )}
 
           {/* LANDING MODE: CTA */}
           {isLanding && (
-            <button className="bg-white text-black px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 hover:bg-blue-50 transition-colors shadow-lg shadow-white/10">
-                Connect Wallet
-                <ArrowRight size={16} />
-            </button>
+            <ConnectKitButton.Custom>
+              {({ isConnected, show, truncatedAddress, ensName }) => (
+                <button 
+                  onClick={show}
+                  className="bg-white text-black px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 hover:bg-blue-50 transition-colors shadow-lg shadow-white/10"
+                >
+                    {isConnected ? (ensName ?? truncatedAddress) : "Connect Wallet"}
+                    {!isConnected && <ArrowRight size={16} />}
+                </button>
+              )}
+            </ConnectKitButton.Custom>
           )}
         </div>
 
@@ -148,7 +172,16 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage = 'home' }) => 
           ))}
           <div className="h-px bg-white/10 my-4"></div>
           <button onClick={() => handleNav('home')} className="text-gray-400 text-left p-4 hover:text-white">Documentation</button>
-          <button className="bg-white text-black py-4 rounded-xl font-bold mt-2 hover:bg-gray-200">Connect Wallet</button>
+          <ConnectKitButton.Custom>
+            {({ isConnected, show, truncatedAddress, ensName }) => (
+              <button 
+                onClick={show} 
+                className="bg-white text-black py-4 rounded-xl font-bold mt-2 hover:bg-gray-200"
+              >
+                {isConnected ? (ensName ?? truncatedAddress) : "Connect Wallet"}
+              </button>
+            )}
+          </ConnectKitButton.Custom>
         </div>
       )}
     </nav>

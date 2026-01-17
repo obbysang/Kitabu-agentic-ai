@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Brain, TrendingUp, ShieldAlert, Server, Zap } from 'lucide-react';
+import { Brain, ShieldAlert, Server, Zap } from 'lucide-react';
 import gsap from 'gsap';
 
 const Intelligence: React.FC = () => {
@@ -91,8 +91,8 @@ const Intelligence: React.FC = () => {
                      </div>
                      <h2 className="text-3xl font-bold mb-4">Idle Cash Detection</h2>
                      <p className="text-gray-400 mb-6 leading-relaxed">
-                         The AI constantly monitors your treasury. If funds sit idle for >24 hours, it calculates potential yield on VVS Finance and proposes a "Move" intent.
-                     </p>
+                        The AI constantly monitors your treasury. If funds sit idle for &gt;24 hours, it calculates potential yield on VVS Finance and proposes a "Move" intent.
+                    </p>
                      <div className="flex gap-4">
                          <div className="bg-white/10 p-4 rounded-xl border border-white/10">
                              <div className="text-2xl font-bold text-white mb-1">12%</div>
