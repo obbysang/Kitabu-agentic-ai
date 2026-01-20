@@ -24,7 +24,7 @@ const config = createConfig(
     appName: "Kitabu",
     appDescription: "AI-native Treasury Management",
     appUrl: "https://kitabu.ai",
-    appIcon: "https://kitabu.ai/logo.png", 
+    appIcon: "/logos/logo.svg", 
   }),
 );
 

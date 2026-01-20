@@ -6,7 +6,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:web": "npm run dev -w kitabu---ai-cfo-dashboard",
+    "sync:assets": "node scripts/sync-assets.mjs",
+    "dev:web": "npm run sync:assets && npm run dev -w kitabu---ai-cfo-dashboard",
     "dev:api": "npm run dev -w @kitabu/api",
     "build": "npm run build --workspaces"
   },
