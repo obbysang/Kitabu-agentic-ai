@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit';
 
 // TODO: Replace with your WalletConnect Project ID from https://cloud.walletconnect.com
-const walletConnectProjectId = process.env.VITE_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID";
+const walletConnectProjectId = (import.meta as any).env?.VITE_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID";
 
 const config = createConfig(
   getDefaultConfig({

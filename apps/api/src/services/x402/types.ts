@@ -59,3 +59,9 @@ export interface X402ExecutionResult {
   txHash?: string;
   error?: string;
 }
+
+export interface X402ClientLike {
+  createSession(config: X402SessionConfig): Promise<string>;
+  executeIntent(sessionId: string, payload: any): Promise<X402ExecutionResult>;
+  getSessionStatus(sessionId: string): Promise<{ active: boolean } | null>;
+}

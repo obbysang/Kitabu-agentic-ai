@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Layers, Key, Users, Check, ArrowRight, Wallet } from 'lucide-react';
 import gsap from 'gsap';
+import { useMutation } from '@tanstack/react-query';
+import { createSession, createIntent, X402Session } from '../lib/api';
 
 const Rails: React.FC = () => {
-  const [sessionActive, setSessionActive] = useState(false);
-  const [rows, setRows] = useState([
-    { address: '0x71C...9A2', amount: '500' },
-    { address: '0x3B2...1C4', amount: '500' },
-    { address: '0x9A1...2D3', amount: '750' },
-  ]);
+  const [rows, setRows] = useState<{ address: string; amount: string }[]>([]);
+  const [session, setSession] = useState<X402Session | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const addRow = () => setRows([...rows, { address: '', amount: '' }]);
 
@@ -18,6 +18,47 @@ const Rails: React.FC = () => {
       { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: 'power2.out' }
     );
   }, []);
+
+  const mutationSession = useMutation({
+    mutationFn: async () => {
+      const s = await createSession('org-1', 'user-1', []);
+      return s;
+    },
+    onSuccess: (s) => {
+      setSession(s);
+      setError(null);
+    },
+    onError: (e: any) => {
+      setError(e.message || 'Failed to create session');
+    }
+  });
+
+  const mutationExecute = useMutation({
+    mutationFn: async () => {
+      if (!session) throw new Error('Session required');
+      const recipients = rows
+        .filter(r => r.address && r.amount && !isNaN(parseFloat(r.amount)))
+        .map(r => ({ address: r.address, amount: r.amount, tokenSymbol: 'USDC' }));
+      if (recipients.length === 0) throw new Error('No valid recipients');
+      const payload = { kind: 'batch_payment', recipients };
+      const res = await createIntent(session.sessionId, 'payment', payload);
+      return res;
+    },
+    onSuccess: (intent) => {
+      setSuccess(`Intent ${intent.id} created`);
+      setError(null);
+    },
+    onError: (e: any) => {
+      setError(e.message || 'Execution failed');
+    }
+  });
+
+  const sessionActive = !!session;
+  const totalAmount = rows.reduce((sum, r) => {
+    const v = parseFloat(r.amount || '0');
+    return sum + (isNaN(v) ? 0 : v);
+  }, 0);
+  const expiresInMinutes = session ? Math.max(0, Math.floor((session.config.expiresAt - Date.now()) / 60000)) : 0;
 
   return (
     <div className="pt-24 min-h-screen bg-slate-50 pb-12">
@@ -53,18 +94,21 @@ const Rails: React.FC = () => {
                     </div>
                     {sessionActive && (
                         <div className="space-y-1 text-xs text-slate-600 font-mono">
-                            <div>Limit: 5,000 USDC</div>
-                            <div>Expires: 59:42</div>
+                            <div>Expires: {expiresInMinutes}m</div>
+                            <div>Permissions: {session.config.permissions.length}</div>
                         </div>
                     )}
                 </div>
 
                 <button 
-                    onClick={() => setSessionActive(!sessionActive)}
-                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-colors ${sessionActive ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
+                    onClick={() => sessionActive ? setSession(null) : mutationSession.mutate()}
+                    disabled={mutationSession.isPending}
+                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-colors ${sessionActive ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-purple-600 text-white hover:bg-purple-700'} ${mutationSession.isPending ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
-                    {sessionActive ? 'Revoke Session' : 'Sign Session (Wallet)'}
+                    {mutationSession.isPending ? 'Signing...' : sessionActive ? 'Revoke Session' : 'Sign Session (Wallet)'}
                 </button>
+                {error && !mutationExecute.isPending && <div className="mt-3 text-xs text-red-600">{error}</div>}
+                {success && <div className="mt-3 text-xs text-green-700">{success}</div>}
             </div>
 
             {/* Right: Batch Payroll Tool */}
@@ -90,10 +134,28 @@ const Rails: React.FC = () => {
                             {rows.map((row, i) => (
                                 <tr key={i} className="border-t border-slate-200">
                                     <td className="p-3 pl-4 font-mono text-slate-700">
-                                        {row.address || <span className="text-gray-400">0x...</span>}
+                                        <input
+                                          value={row.address}
+                                          onChange={(e) => {
+                                            const next = [...rows];
+                                            next[i] = { ...next[i], address: e.target.value };
+                                            setRows(next);
+                                          }}
+                                          placeholder="0x..."
+                                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono"
+                                        />
                                     </td>
                                     <td className="p-3 font-mono text-slate-700">
-                                        {row.amount || '0'}
+                                        <input
+                                          value={row.amount}
+                                          onChange={(e) => {
+                                            const next = [...rows];
+                                            next[i] = { ...next[i], amount: e.target.value };
+                                            setRows(next);
+                                          }}
+                                          placeholder="0"
+                                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono"
+                                        />
                                     </td>
                                 </tr>
                             ))}
@@ -107,10 +169,14 @@ const Rails: React.FC = () => {
                 <div className="flex justify-between items-end">
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Total Output</div>
-                        <div className="text-2xl font-bold text-slate-900">1,750 <span className="text-sm font-normal text-gray-400">USDC</span></div>
+                        <div className="text-2xl font-bold text-slate-900">{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} <span className="text-sm font-normal text-gray-400">USDC</span></div>
                     </div>
-                    <button className={`px-6 py-3 rounded-xl font-semibold flex items-center gap-2 text-white transition-all ${sessionActive ? 'bg-slate-900 hover:bg-slate-800' : 'bg-gray-300 cursor-not-allowed'}`}>
-                        {sessionActive ? <><Check size={18} /> Execute Batch</> : 'Session Required'}
+                    <button
+                      onClick={() => mutationExecute.mutate()}
+                      disabled={!sessionActive || mutationExecute.isPending}
+                      className={`px-6 py-3 rounded-xl font-semibold flex items-center gap-2 text-white transition-all ${sessionActive ? 'bg-slate-900 hover:bg-slate-800' : 'bg-gray-300 cursor-not-allowed'} ${mutationExecute.isPending ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    >
+                        {sessionActive ? <>{mutationExecute.isPending ? 'Executing...' : <><Check size={18} /> Execute Batch</>}</> : 'Session Required'}
                     </button>
                 </div>
             </div>

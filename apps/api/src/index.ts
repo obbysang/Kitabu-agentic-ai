@@ -2,11 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { 
-  MockX402Client, 
+  X402Client, 
   X402SessionManager, 
   X402Orchestrator, 
   X402RuleEngine, 
-  X402IntentStatus 
+  X402IntentStatus,
+  MockX402Client
 } from './services/x402/index.js';
 import { 
   InvoiceIngestionService, 
@@ -19,7 +20,8 @@ import { YieldService } from './services/defi/YieldService.js';
 import { 
   TreasuryService, 
   ActivityService, 
-  ReportingService 
+  ReportingService,
+  VaultService
 } from './services/treasury/index.js';
 import { AutomationRuleService } from './services/automation/AutomationRuleService.js';
 import { IdleCashService } from './services/automation/IdleCashService.js';
@@ -35,6 +37,9 @@ import { createAuthRouter } from './routes/auth.js';
 import { createOrgRouter } from './routes/org.js';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { metrics } from './middleware/metrics.js';
+import { createRateLimiter } from './middleware/rateLimit.js';
+import { errorHandler } from './middleware/error.js';
 
 dotenv.config();
 
@@ -50,7 +55,7 @@ const authService = new AuthService(orgService);
 const configService = new ConfigService(orgService);
 
 // Initialize x402 Services
-const x402Client = new MockX402Client();
+const x402Client = process.env.TREASURY_PRIVATE_KEY ? new X402Client() : new MockX402Client();
 const sessionManager = new X402SessionManager(x402Client);
 const orchestrator = new X402Orchestrator(x402Client, sessionManager);
 
@@ -59,7 +64,8 @@ const marketDataService = new MarketDataService();
 const yieldService = new YieldService(process.env.RPC_URL);
 
 // Initialize Treasury Services
-const treasuryService = new TreasuryService(marketDataService, orchestrator);
+const vaultService = new VaultService();
+const treasuryService = new TreasuryService(marketDataService, orchestrator, vaultService, configService);
 const activityService = new ActivityService(orchestrator);
 const reportingService = new ReportingService();
 
@@ -97,6 +103,8 @@ const historyService = new HistoryService();
 
 app.use(express.json({ limit: '50mb' })); // Increase limit for file uploads
 app.use(cors());
+app.use(metrics.middleware);
+app.use(createRateLimiter({ windowMs: 60_000, max: 60 }));
 
 // --- Core Platform Routes ---
 app.use('/auth', createAuthRouter(authService));
@@ -104,6 +112,9 @@ app.use('/orgs', createOrgRouter(orgService, configService, authService));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'kitabu-api' });
+});
+app.get('/metrics', (req, res) => {
+  res.json(metrics.getJSON());
 });
 
 // --- Invoice Routes ---
@@ -404,3 +415,4 @@ app.get('/treasury/history', async (req, res) => {
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
+app.use(errorHandler);

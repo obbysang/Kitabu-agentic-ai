@@ -4,6 +4,7 @@ export interface OrgPolicy {
   dailySpendLimit: string; // in wei
   allowedTokens: string[]; // addresses
   whitelistedRecipients: string[]; // addresses
+  whitelistStrict?: boolean;
 }
 
 export class X402RuleEngine {
@@ -53,9 +54,10 @@ export class X402RuleEngine {
     }
 
     if (intentPayload.to && !policy.whitelistedRecipients.includes(intentPayload.to)) {
-      // In strict mode, we might block. For now, we'll just warn or allow if whitelist is empty.
-      if (policy.whitelistedRecipients.length > 0) {
-         return { allowed: false, reason: 'Recipient not in whitelist' };
+      if (policy.whitelistStrict) {
+        return { allowed: false, reason: 'Recipient not in whitelist' };
+      } else if (policy.whitelistedRecipients.length > 0) {
+        return { allowed: false, reason: 'Recipient not in whitelist' };
       }
     }
 

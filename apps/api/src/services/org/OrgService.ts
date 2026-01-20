@@ -15,7 +15,9 @@ export class OrgService {
         whitelistedRecipients: [],
         yieldRiskTolerance: 'low',
         targetUtilization: 20,
-        requireApprovalAbove: '500000000000000000' // 0.5 ETH
+        requireApprovalAbove: '500000000000000000', // 0.5 ETH
+        whitelistStrict: false,
+        dualApprovalRequired: false
       }
     });
   }

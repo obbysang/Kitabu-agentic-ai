@@ -9,3 +9,11 @@ Cronos EVM Testnet TCRO faucet: https://cronos.org/faucet
 Cronos EVM devUSDC.e token faucet: https://faucet.cronos.org
 Wallet integrations: https://docs.cronos.org/for-dapp-developers/chain-integration/web-extension-integration
 Cronos EVM Docs: docs.cronos.org
+
+API Endpoints Used by Intelligence
+- GET /market/price/:symbol
+- GET /market/gas
+- GET /market/yields
+- GET /treasury/overview
+- GET /orgs/me
+- GET /orgs/:id/config

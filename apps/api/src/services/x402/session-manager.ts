@@ -1,13 +1,12 @@
-import { MockX402Client } from './client.js';
-import { X402Session, X402SessionConfig, X402SessionStatus } from './types.js';
+import { X402Session, X402SessionConfig, X402SessionStatus, X402ClientLike } from './types.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export class X402SessionManager {
-  private client: MockX402Client;
+  private client: X402ClientLike;
   // In a real app, this would be a database repository
   private sessionStore: Map<string, X402Session> = new Map();
 
-  constructor(client: MockX402Client) {
+  constructor(client: X402ClientLike) {
     this.client = client;
   }
 

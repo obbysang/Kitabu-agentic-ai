@@ -5,6 +5,8 @@ export interface OrgConfig {
   yieldRiskTolerance: 'low' | 'medium' | 'high';
   targetUtilization: number; // 0-100 percentage
   requireApprovalAbove: string; // Amount above which approval is needed
+  whitelistStrict?: boolean;
+  dualApprovalRequired?: boolean;
 }
 
 export interface Organization {

@@ -1,15 +1,14 @@
-import { MockX402Client } from './client.js';
 import { X402SessionManager } from './session-manager.js';
-import { X402Intent, X402IntentStatus } from './types.js';
+import { X402Intent, X402IntentStatus, X402ClientLike } from './types.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export class X402Orchestrator {
-  private client: MockX402Client;
+  private client: X402ClientLike;
   private sessionManager: X402SessionManager;
   // In a real app, this would be a database repository
   private intentStore: Map<string, X402Intent> = new Map();
 
-  constructor(client: MockX402Client, sessionManager: X402SessionManager) {
+  constructor(client: X402ClientLike, sessionManager: X402SessionManager) {
     this.client = client;
     this.sessionManager = sessionManager;
   }

@@ -3,50 +3,70 @@ import { MarketDataService } from '../market/MarketDataService.js';
 import { X402Orchestrator } from '../x402/orchestrator.js';
 import { TreasuryOverview, TreasuryBalance } from './types.js';
 import { X402IntentStatus } from '../x402/types.js';
+import { VaultService } from './VaultService.js';
+import { ConfigService } from '../config/ConfigService.js';
+import { KNOWN_TOKENS, VVS_ADDRESSES } from '../defi/constants.js';
 
 export class TreasuryService {
   private marketDataService: MarketDataService;
   private orchestrator: X402Orchestrator;
+  private vaultService: VaultService;
+  private configService: ConfigService;
 
-  constructor(marketDataService: MarketDataService, orchestrator: X402Orchestrator) {
+  constructor(
+    marketDataService: MarketDataService, 
+    orchestrator: X402Orchestrator,
+    vaultService: VaultService,
+    configService: ConfigService
+  ) {
     this.marketDataService = marketDataService;
     this.orchestrator = orchestrator;
+    this.vaultService = vaultService;
+    this.configService = configService;
   }
 
-  // Mock vault address
-  private readonly VAULT_ADDRESS = '0xVaultAddressMock';
-
   public async getBalances(orgId?: string): Promise<TreasuryBalance[]> {
-    // Mock data - In production this would query the TreasuryVault contract
-    const mockHoldings = [
-      { symbol: 'CRO', amount: '10000', decimals: 18 },
-      { symbol: 'USDC', amount: '50000', decimals: 6 },
-      { symbol: 'WBTC', amount: '1.5', decimals: 8 },
-    ];
-
     const balances: TreasuryBalance[] = [];
 
-    for (const holding of mockHoldings) {
-      try {
-        const price = await this.marketDataService.getTokenPrice(holding.symbol);
-        const amountNum = parseFloat(holding.amount);
+    // 1. Check Native CRO
+    try {
+        const croBalance = await this.vaultService.getBalance();
+        const price = await this.marketDataService.getTokenPrice('CRO');
         balances.push({
-            tokenSymbol: holding.symbol,
-            tokenAddress: '0xMockAddress', 
-            amount: holding.amount,
-            decimals: holding.decimals,
-            usdValue: amountNum * price.price
+            tokenSymbol: 'CRO',
+            tokenAddress: '0x0000000000000000000000000000000000000000',
+            amount: croBalance,
+            decimals: 18,
+            usdValue: parseFloat(croBalance) * price.price
         });
-      } catch (e) {
-        // If price fetch fails, default to 0 value but include token
-        balances.push({
-            tokenSymbol: holding.symbol,
-            tokenAddress: '0xMockAddress',
-            amount: holding.amount,
-            decimals: holding.decimals,
-            usdValue: 0
-        });
-      }
+    } catch (e) {
+        console.error('Error fetching CRO balance', e);
+    }
+
+    // 2. Check Known Tokens
+    const tokensToCheck = { ...KNOWN_TOKENS, VVS: VVS_ADDRESSES.cronosTestnet.vvsToken };
+
+    for (const [symbol, address] of Object.entries(tokensToCheck)) {
+         try {
+            const balance = await this.vaultService.getERC20Balance(address as `0x${string}`);
+            const price = await this.marketDataService.getTokenPrice(symbol);
+            
+            // Note: Decimals are handled inside getERC20Balance for formatting, 
+            // but we hardcode/guess here for the return object if we don't fetch it again.
+            // Ideally VaultService returns struct.
+            const decimals = symbol === 'USDC' ? 6 : 18; 
+
+            balances.push({
+                tokenSymbol: symbol,
+                tokenAddress: address,
+                amount: balance,
+                decimals: decimals, 
+                usdValue: parseFloat(balance) * price.price
+            });
+         } catch (e) {
+             // console.error(`Error fetching ${symbol} balance`, e);
+             // Fail silently for tokens not present or error
+         }
     }
 
     return balances;

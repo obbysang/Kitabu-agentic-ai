@@ -4,6 +4,8 @@ import { ConfigService } from '../services/config/ConfigService.js';
 import { createAuthMiddleware, requireRole } from '../middleware/auth.js';
 import { AuthService } from '../services/auth/AuthService.js';
 import { UserRole } from '../types/auth.js';
+import { createRateLimiter } from '../middleware/rateLimit.js';
+import { orgConfigUpdateSchema, validate } from '../validation/orgConfig.js';
 
 export const createOrgRouter = (
   orgService: OrgService, 
@@ -12,6 +14,7 @@ export const createOrgRouter = (
 ) => {
   const router = Router();
   const authMiddleware = createAuthMiddleware(authService);
+  const adminLimiter = createRateLimiter({ windowMs: 60_000, max: 20 });
 
   router.use(authMiddleware);
 
@@ -43,7 +46,9 @@ export const createOrgRouter = (
   // Update Org Config (Admin/Ops only)
   router.patch(
     '/:id/config', 
-    requireRole([UserRole.ADMIN, UserRole.FINANCE_OPS]), 
+    requireRole([UserRole.ADMIN, UserRole.FINANCE_OPS]),
+    adminLimiter,
+    validate(orgConfigUpdateSchema),
     async (req, res) => {
       // Ensure user belongs to this org
       if (req.user?.orgId !== req.params.id && req.user?.role !== UserRole.ADMIN) {
@@ -51,13 +56,32 @@ export const createOrgRouter = (
       }
 
       try {
-        const updatedOrg = await configService.updateConfig(req.params.id, req.body);
+        const updatedOrg = await configService.updateConfig(req.params.id as string, req.body);
         res.json(updatedOrg);
       } catch (error: any) {
         res.status(400).json({ error: error.message });
       }
     }
   );
+
+  router.get('/:id/policy', async (req, res) => {
+    if (req.user?.orgId !== req.params.id && req.user?.role !== UserRole.ADMIN) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    try {
+      const cfg = await configService.getConfig(req.params.id);
+      res.json({
+        maxDailySpend: cfg.maxDailySpend,
+        requireApprovalAbove: cfg.requireApprovalAbove,
+        allowedTokens: cfg.allowedTokens,
+        whitelistedRecipients: cfg.whitelistedRecipients,
+        whitelistStrict: !!cfg.whitelistStrict,
+        dualApprovalRequired: !!cfg.dualApprovalRequired,
+      });
+    } catch (error: any) {
+      res.status(404).json({ error: error.message });
+    }
+  });
 
   return router;
 };

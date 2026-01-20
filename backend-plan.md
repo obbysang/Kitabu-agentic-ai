@@ -1,262 +1,35 @@
-High-Level Backend Scope
 
-- API + auth for the CFO dashboard and agents
-- AI + intent parsing and policy engine
-- x402 execution orchestration and lifecycle tracking
-- Market data + risk checks
-- DeFi / VVS Finance integration for yield
-- Treasury vault + access-control integration
-- Invoice / RWA pipeline
-- Automation (idle cash, payroll prep)
-- Observability, audit, and ops
-Below is a backend-focused implementation checklist derived from developer-resources.md and prd.md .
+12. Frontend Data Contracts & Integration
+- API Client
+  - Implemented using Fetch API with React Query for state management.
+  - Base URL: Configurable via `VITE_API_URL` (default: http://localhost:3001).
+  - Error Handling: Centralized `ApiError` class with status code support.
 
-1. Core API & Platform
+- Data Schemas (TypeScript Interfaces)
+  - `TreasuryOverview`:
+    - `totalUsdValue`: number
+    - `balances`: Array<{ tokenSymbol, amount, usdValue, ... }>
+    - `pendingPaymentsCount`: number
+  - `ActivityItem`:
+    - `id`: string
+    - `type`: 'payment' | 'yield' | 'invoice' | 'system'
+    - `status`: 'pending' | 'completed' | 'failed'
+    - `description`: string
+    - `timestamp`: number
+  - `ChatResponse`:
+    - `message`: string
+    - `intent`: Structured JSON (x402 compatible)
+    - `safetyCheck`: { safe: boolean, reason?: string }
 
-- API Gateway / Backend Service
-  - HTTP/JSON API for the frontend: treasury overview, activities, invoices, configurations, etc.
-  - Versioned routes, consistent JSON schema, explicit status fields.
-- Authentication & Authorization
-  - Org/user auth (e.g., admin, finance-ops, viewer).
-  - RBAC enforcement for API endpoints (who can configure limits, who can approve payments).
-  - Session management (JWT or similar) and CSRF protection if needed.
-- Organization & Account Model
-  - Data model for organizations, roles, team members.
-  - Mapping between orgs and their Treasury Vault address(es) and x402 session IDs.
-- Configuration Management
-  - Per-org configuration for:
-    - Spend limits and daily caps.
-    - Whitelisted destination addresses.
-    - Approved token types.
-    - Yield strategy preferences (risk tolerance, target utilization).
-  - Admin APIs to read/update these configs.
-2. AI & Intent Layer (Crypto.com AI Agent SDK)
+- Integration Strategy
+  - **Polling**: Real-time updates for Treasury Overview (10s) and Activity Feed (5s).
+  - **Optimistic Updates**: Immediate UI feedback for chat interactions.
+  - **Error Boundaries**: Graceful degradation with retry mechanisms.
 
-- AI Agent Orchestration Service
-  - Integration with Crypto.com AI Agent SDK as the primary AI interface.
-  - Tooling / function-calling definitions for:
-    - Checking balances.
-    - Creating/validating payment intents.
-    - Triggering yield actions.
-    - Querying market data (via MCP).
-- Text-to-Transaction Intent Parser
-  - Service that converts natural language into structured JSON payloads matching the x402 format:
-    - Action type (payroll, vendor payment, swap, yield-deploy, yield-exit).
-    - Token, amounts, recipients, schedule, constraints.
-- Intent Validation Engine
-  - Schema validation of AI-generated payloads.
-  - Business rule checks:
-    - Whitelist enforcement.
-    - Spend limits and daily caps.
-    - Token allowlist.
-    - Required approvals thresholds.
-- Safety Guardrail Enforcement
-  - Central policy engine implementing:
-    - Per-user and per-org limits.
-    - Additional-approval requirements above thresholds.
-    - Block/flag non-whitelisted addresses or suspicious patterns.
-  - Structured refusal responses when constraints fail.
-- Conversation / Command History
-  - Store user commands, parsed intents, and outcomes linked to org and user.
-  - Expose history back to the dashboard.
-3. Market Data & Risk (Crypto.com Market Data MCP)
-
-- MCP Client Integration
-  - Backend client for Crypto.com Market Data MCP Server:
-    - Fetch spot token prices.
-    - Fetch gas fees.
-    - Fetch APY / yield opportunities for relevant pools.
-- Price / Gas / APY Service
-  - Normalization layer that:
-    - Caches results.
-    - Applies rate limiting and fallbacks.
-    - Provides simple functions like estimateCost(intent) or getOptimalPool(token) .
-- Execution Cost & Risk Evaluation
-  - Logic to:
-    - Evaluate if a transaction is cost-efficient (gas vs. payout amount or expected yield).
-    - Reject or warn if gas is too high or APY is insufficient.
-- Market Data Validation
-  - Guards against stale data (timestamps, TTL).
-  - Clear error paths when MCP is unavailable (no blind execution).
-4. x402 Execution Layer (Cronos x402 Facilitator SDK)
-
-- x402 Session Management
-  - Integration with Cronos x402 Facilitator SDK.
-  - Backend endpoints to:
-    - Initialize sessions (one-time user signature happens outside backend, but backend tracks state).
-    - Store and manage session metadata (permissions, expirations, scope).
-- Smart Session Rule Mapping
-  - Translate org policies (spend limits, allowed tokens, whitelists) into x402 smart session rules.
-  - Validate that intents fall within session permissions before execution.
-- Intent Execution Orchestrator
-  - Given a validated intent:
-    - Construct x402-compatible execution payload(s).
-    - Submit to the facilitator.
-    - Handle async callbacks/webhooks if provided by SDK.
-- Lifecycle Tracking & State Machine
-  - Persist x402 intent + transaction states:
-    - created → processing → pending → settled → failed .
-  - Update status and surface to:
-    - Activity feed.
-    - AI agent context.
-- Error Handling & Idempotency
-  - Idempotent execution (avoid double payments if retried).
-  - Robust handling of partial failures (batch payments where some recipients fail).
-  - Clear error codes and remediation hints.
-5. Cronos EVM & Treasury Vault Integration
-
-- Chain Client
-  - viem or ethers v6 client for:
-    - Reading on-chain balances.
-    - Reading Treasury Vault state.
-    - Monitoring transaction receipts and confirmations (if not fully abstracted by x402).
-- TreasuryVault.sol Integration
-  - ABI + typed client for the Treasury Vault contract:
-    - Query balances for CRO, USDC, LP tokens, etc.
-    - Read auth roles and whitelisted agent addresses.
-    - Read any yield-related positions stored in the vault.
-- Access Control Enforcement
-  - Backend logic to:
-    - Ensure only whitelisted x402 agent addresses can trigger vault actions.
-    - Sync/reconcile on-chain roles with backend configuration view.
-- Event Indexing (Optional but Production-Grade)
-  - Indexer that listens to Treasury Vault and DeFi protocol events:
-    - Deposits, withdrawals, swaps, yield deployments, yield exits.
-    - Maps on-chain events to human-readable activity entries.
-6. DeFi / Yield Integration (VVS Finance & Cronos DeFi)
-
-- Protocol Client(s)
-  - Typed clients for VVS Finance (and any other Cronos DeFi apps used):
-    - Liquidity pool contracts.
-    - Staking/farming contracts if used.
-- Yield Strategy Engine
-  - Logic implementing:
-    - Automatic USDC ↔ LP token swaps.
-    - Pool selection based on APY, liquidity, and strategy parameters.
-- Yield Deployment & Exit Flows
-  - High-level services:
-    - deployIdleFundsToYield(idleAmount, constraints) .
-    - exitYieldForUpcomingPayroll(amountNeeded, deadline) .
-  - These must:
-    - Generate structured intents for x402.
-    - Respect limits, slippage, and strategy config.
-- Real-Time APY Monitoring
-  - Periodic polling of pool APYs (via MCP or direct protocol calls).
-  - Persisted time series to support:
-    - Recommendations.
-    - Backtesting / audit trail of strategy decisions.
-7. Invoice / RWA Processing
-
-- Invoice Ingestion Service
-  - Backend endpoint to receive PDF (from frontend upload).
-  - Storage for raw PDFs (secure, access-controlled).
-- Invoice Parsing / Extraction
-  - Integration with AI (via Crypto.com AI Agent SDK or a dedicated OCR/LLM pipeline) to extract:
-    - Destination wallet address.
-    - Token / currency.
-    - Amount.
-    - Due date, invoice ID, vendor metadata.
-  - Validation of extracted address/amount against org rules.
-- Invoice Validation & Approval
-  - Workflow handling:
-    - Auto-approval under thresholds.
-    - Multi-step approvals for large invoices or new vendors.
-  - Mapping parsed invoice → payment intent JSON (x402-compatible).
-- Scheduled Invoice Payments
-  - Scheduler to:
-    - Trigger invoice payment intents near due dates.
-    - Recheck limits, balances, and risk before execution.
-- Invoice Status Tracking
-  - Store invoice states:
-    - uploaded → parsed → pending_approval → scheduled → paid / failed .
-  - Expose to frontend dashboard.
-8. Idle Cash & Automation Engine
-
-- Idle Balance Detection
-  - Periodic jobs that:
-    - Check vault balances.
-    - Identify funds idle for >24h (or configurable).
-- Automation Rules
-  - Per-org rules describing:
-    - What counts as “idle” (thresholds, buffer).
-    - Target utilization / liquidity buffer.
-    - Which pools to use and max allocation percentages.
-- Automation Intent Generator
-  - For each automation rule, generate corresponding intents:
-    - Idle cash → yield deploy.
-    - Pre-payroll → yield exit / rebalance.
-  - Route these intents through the same validation and x402 pipeline (no special bypass).
-9. Treasury Data & Dashboard Backend
-
-- Treasury Overview Aggregator
-  - Consolidates:
-    - On-chain balances.
-    - Yield positions and LP tokens.
-    - Pending payments and scheduled invoices.
-  - Converts to USD-equivalent using MCP market prices.
-- Activity Feed Backend
-  - Unified activity log combining:
-    - x402 intents & states.
-    - Treasury Vault events.
-    - Yield actions.
-    - Invoices and automation actions.
-  - Pagination and filtering APIs for the frontend.
-- Historical Data & Reporting
-  - Storage and APIs for:
-    - Historical balances.
-    - Yield performance.
-    - Payment history (per vendor/employee).
-  - Export endpoints (CSV/JSON) for accounting/compliance.
-10. Security, Compliance, and Ops
-
-- Secrets & Key Management
-  - Secure storage for:
-    - MCP credentials.
-    - x402 facilitator credentials.
-    - Any API keys needed by the AI Agent SDK.
-- Input Validation & Sanitization
-  - Strong validation for:
-    - Addresses, token symbols, amounts, timestamps.
-    - User-provided metadata (names, notes).
-- Audit Logging
-  - Immutable (or append-only) audit log recording:
-    - Who requested what action.
-    - Parsed intent.
-    - Validation results.
-    - Final on-chain transaction hash or failure reason.
-- Monitoring & Alerting
-  - Metrics for:
-    - Failed executions.
-    - MCP/x402 errors.
-    - Abnormal execution volumes or large transfers.
-  - Alerting hooks for ops/on-call.
-- Rate Limiting & Abuse Protection
-  - Per-user and per-org rate limits for sensitive endpoints (payments, invoice creation).
-- Testing & Validation Harness
-  - Integration test suites for:
-    - x402 flows (using testnet).
-    - MCP queries.
-    - DeFi interactions on Cronos testnet.
-  - Simulated scenarios:
-    - Network failures.
-    - Extreme market volatility.
-    - Contract revert conditions.
-11. Production-Grade Non-Functional Concerns
-
-- Deployment & Environment Management
-  - Clear separation of environments:
-    - Local → Testnet → Staging → Mainnet/Prod.
-  - Configuration for which Cronos network and DeFi endpoints to use per env.
-- Schema Migrations & Data Integrity
-  - Migration tooling and rollback plans for database schema changes.
-- Backups & Disaster Recovery
-  - Regular backups for:
-    - Database.
-    - Critical configuration.
-    - Audit logs.
-- Documentation
-  - API documentation (OpenAPI/Swagger or similar).
-  - Runbooks for:
-    - x402 failures.
-    - MCP downtime.
-    - DeFi protocol changes or migrations.
+12.1 API Endpoints Used by Intelligence
+- GET /market/price/:symbol
+- GET /market/gas
+- GET /market/yields
+- GET /treasury/overview
+- GET /orgs/me
+- GET /orgs/:id/config
