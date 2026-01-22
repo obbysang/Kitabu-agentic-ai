@@ -3,8 +3,8 @@ import { ArrowRight, Menu, X, Bot, Bell, ChevronDown, ExternalLink } from 'lucid
 import { ConnectKitButton } from 'connectkit'
 
 interface NavbarProps {
-  onNavigate?: (page: 'home' | 'dashboard' | 'intelligence' | 'rails' | 'rwa') => void
-  currentPage?: 'home' | 'dashboard' | 'intelligence' | 'rails' | 'rwa'
+  onNavigate?: (page: 'home' | 'dashboard' | 'intelligence' | 'rails' | 'rwa' | 'docs') => void
+  currentPage?: 'home' | 'dashboard' | 'intelligence' | 'rails' | 'rwa' | 'docs'
   loading?: boolean
   error?: string | null
   docsHref?: string
@@ -40,7 +40,7 @@ const Navbar: React.FC<NavbarProps> = React.memo(({ onNavigate, currentPage = 'h
   }, [mobileMenuOpen])
 
   const handleNav = useCallback(
-    (page: 'home' | 'dashboard' | 'intelligence' | 'rails' | 'rwa') => {
+    (page: 'home' | 'dashboard' | 'intelligence' | 'rails' | 'rwa' | 'docs') => {
       if (onNavigate) {
         onNavigate(page)
         setMobileMenuOpen(false)
@@ -116,22 +116,20 @@ const Navbar: React.FC<NavbarProps> = React.memo(({ onNavigate, currentPage = 'h
         )}
 
         <div className="hidden md:flex items-center gap-5">
-          {loading ? (
-            <div className="flex items-center gap-3 animate-pulse">
-              <div className="h-6 w-24 rounded bg-white/20" />
-              <div className="h-9 w-36 rounded-full bg-white/20" />
-            </div>
-          ) : (
-            <>
-              <a
-                href={docsHref}
-                target="_blank"
-                rel="noreferrer"
-                className={`text-sm font-medium flex items-center gap-1.5 transition-colors ${isLanding ? 'text-gray-300 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
-                aria-label="Open documentation"
-              >
-                Docs <ExternalLink size={14} opacity={0.7} />
-              </a>
+            {loading ? (
+              <div className="flex items-center gap-3 animate-pulse">
+                <div className="h-6 w-24 rounded bg-white/20" />
+                <div className="h-9 w-36 rounded-full bg-white/20" />
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => handleNav('docs')}
+                  className={`text-sm font-medium flex items-center gap-1.5 transition-colors ${isLanding ? 'text-gray-300 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
+                  aria-label="Open documentation"
+                >
+                  Docs <ExternalLink size={14} opacity={0.7} />
+                </button>
 
               {!isLanding && (
                 <div className="flex items-center gap-3 pl-5 border-l border-slate-200">
@@ -210,7 +208,14 @@ const Navbar: React.FC<NavbarProps> = React.memo(({ onNavigate, currentPage = 'h
             </button>
           ))}
           <div className="h-px bg-white/10 my-4"></div>
-          <a href={docsHref} target="_blank" rel="noreferrer" className="text-gray-400 text-left p-4 hover:text-white" aria-label="Open documentation">Documentation</a>
+          <button
+            onClick={() => handleNav('docs')}
+            className="text-gray-400 text-left p-4 hover:text-white w-full flex justify-between items-center group"
+            aria-label="Open documentation"
+          >
+            Documentation
+            <ExternalLink size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
           <ConnectKitButton.Custom>
             {({ isConnected, show, truncatedAddress, ensName }) => (
               <button
