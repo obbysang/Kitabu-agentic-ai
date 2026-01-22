@@ -1,5 +1,4 @@
 import { Invoice, InvoiceStatus, ExtractedInvoiceData } from './types.js';
-import { AiAgentService } from '../ai-agent.js';
 
 // Mock interface for the AI Agent SDK response
 interface AIParseResult {
@@ -13,10 +12,8 @@ interface AIParseResult {
 }
 
 export class InvoiceParsingService {
-  private aiAgentService: AiAgentService;
-
-  constructor(aiAgentService: AiAgentService) {
-    this.aiAgentService = aiAgentService;
+  constructor() {
+    // Initialize AI Agent SDK client here if available
   }
 
   /**
@@ -29,58 +26,21 @@ export class InvoiceParsingService {
       // In a real implementation, we would read the file from invoice.storagePath
       // and send it to the AI Agent SDK or an OCR service.
       
-      // Construct a prompt for the AI Agent
-      // Since we don't have real OCR text in this demo, we ask the AI to simulate the extraction based on the file metadata
-      const prompt = `
-        You are an intelligent document processing agent.
-        I have an invoice with ID "${invoice.id}" and filename "${invoice.metadata.originalFileName}".
-        
-        Please extract (or simulate extraction of) the following details from this invoice:
-        - Destination Address (Ethereum/Cronos address)
-        - Token Symbol (e.g. USDC, CRO, ETH)
-        - Amount
-        - Due Date (ISO format)
-        - Vendor Name
-        - Vendor Metadata (category, taxId)
-        
-        Return ONLY a JSON object with these keys: destinationAddress, tokenSymbol, amount, dueDate, vendorName, vendorMetadata.
-        Do not include markdown formatting or explanation.
-        Ensure the destination address is a valid 0x address.
-        Ensure the due date is in the future.
-      `;
+      // MOCK: Simulate AI processing delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      console.log(`[InvoiceParsing] Sending prompt to AI Agent...`);
-      const aiResponse = await this.aiAgentService.processMessage(prompt);
-      
-      let extractedData: ExtractedInvoiceData;
-
-      // Try to parse the AI response
-      try {
-        // Clean up markdown code blocks if present
-        const jsonStr = aiResponse.message.replace(/```json/g, '').replace(/```/g, '').trim();
-        extractedData = JSON.parse(jsonStr);
-        
-        // Add confidence score if missing
-        if (!extractedData.confidenceScore) {
-          extractedData.confidenceScore = 0.95;
-        }
-        
-        // Ensure invoiceId matches
-        extractedData.invoiceId = invoice.id;
-
-      } catch (parseError) {
-        console.warn(`[InvoiceParsing] AI returned non-JSON response, falling back to mock. Response: ${aiResponse.message}`);
-        extractedData = this.mockAIExtraction(invoice);
-      }
+      // MOCK: Return deterministic extracted data for demo purposes
+      // We'll generate "valid" data based on the invoice ID to seem realistic
+      const mockExtraction = this.mockAIExtraction(invoice);
 
       // Validate extracted data (basic checks)
-      this.validateExtractedData(extractedData);
+      this.validateExtractedData(mockExtraction);
 
       // Update invoice
       const updatedInvoice: Invoice = {
         ...invoice,
         status: InvoiceStatus.PARSED,
-        extractedData: extractedData,
+        extractedData: mockExtraction,
         updatedAt: Date.now(),
       };
 

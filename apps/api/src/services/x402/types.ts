@@ -41,7 +41,7 @@ export interface X402Session {
 export interface X402Intent {
   id: string;
   sessionId: string;
-  type: 'payment' | 'yield' | 'swap' | 'custom' | 'batch';
+  type: 'payment' | 'yield' | 'swap' | 'custom';
   payload: any; // The raw execution payload
   status: X402IntentStatus;
   txHash?: string;
