@@ -1,8 +1,16 @@
 import React, { useEffect, useRef } from 'react';
-import { Send, Terminal, ShieldCheck, Zap } from 'lucide-react';
+import { Terminal, ShieldCheck, Zap } from 'lucide-react';
 import gsap from 'gsap';
 
-const Hero: React.FC = () => {
+interface HeroProps {
+  /**
+   * Function to handle navigation between pages
+   * @param page - The page identifier to navigate to
+   */
+  onNavigate?: (page: string) => void;
+}
+
+const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   const titleRef = useRef(null);
   const descRef = useRef(null);
   const ctaRef = useRef(null);
@@ -12,6 +20,24 @@ const Hero: React.FC = () => {
     if (el && !badgesRef.current.includes(el)) {
       badgesRef.current.push(el);
     }
+  };
+
+  /**
+   * Handles the click event for launching the dashboard
+   */
+  const handleLaunchDashboard = () => {
+    // Log navigation event for observability
+    console.log('[Hero] Launching dashboard');
+    if (onNavigate) {
+      onNavigate('dashboard');
+    }
+  };
+
+  /**
+   * Handles the click event for viewing documentation
+   */
+  const handleViewDocs = () => {
+    window.open('https://docs.cronos.org/cronos-x402-facilitator/introduction', '_blank', 'noopener,noreferrer');
   };
 
   useEffect(() => {
@@ -80,11 +106,19 @@ const Hero: React.FC = () => {
 
         {/* CTAs */}
         <div ref={ctaRef} className="flex flex-col sm:flex-row items-center gap-4 mt-4 opacity-0">
-          <button className="bg-white text-black px-8 py-4 rounded-full font-semibold flex items-center gap-2 hover:bg-gray-200 transition-colors text-lg">
+          <button 
+            onClick={handleLaunchDashboard}
+            className="bg-white text-black px-8 py-4 rounded-full font-semibold flex items-center gap-2 hover:bg-gray-200 transition-colors text-lg"
+            aria-label="Launch Command Dashboard"
+          >
             <Terminal size={20} />
             Launch Command Dashboard
           </button>
-          <button className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-8 py-4 rounded-full font-semibold flex items-center gap-2 hover:bg-white/20 transition-colors text-lg">
+          <button 
+            onClick={handleViewDocs}
+            className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-8 py-4 rounded-full font-semibold flex items-center gap-2 hover:bg-white/20 transition-colors text-lg"
+            aria-label="View x402 Documentation"
+          >
             <Zap size={20} />
             View x402 Docs
           </button>

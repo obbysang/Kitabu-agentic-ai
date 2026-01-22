@@ -21,7 +21,13 @@ export interface SwapIntent {
   amountOutMin?: number;
 }
 
-export type Intent = PaymentIntent | YieldIntent | SwapIntent;
+export interface BatchIntent {
+  type: 'BATCH';
+  intents: Intent[]; // Can contain Payment, Yield, Swap, or even nested Batch
+  ordered?: boolean; // If true, execute sequentially (Multi-step). If false, can be parallel.
+}
+
+export type Intent = PaymentIntent | YieldIntent | SwapIntent | BatchIntent;
 
 export interface AiResponse {
   message: string;

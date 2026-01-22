@@ -16,7 +16,7 @@ interface Options {
 const buckets = new Map<Key, RateBucket>();
 
 export const createRateLimiter = (opts: Options) => {
-  const keyFn = opts.keyGenerator || ((req: Request) => req.headers['x-forwarded-for']?.toString() || req.ip);
+  const keyFn = opts.keyGenerator || ((req: Request) => req.headers['x-forwarded-for']?.toString() || req.ip || 'unknown');
   return (req: Request, res: Response, next: NextFunction) => {
     const now = Date.now();
     const key = keyFn(req);

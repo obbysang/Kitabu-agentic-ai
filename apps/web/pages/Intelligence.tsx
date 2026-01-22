@@ -55,7 +55,7 @@ const Intelligence: React.FC = () => {
 
   const croUsd = croPrice?.price ?? null;
   const apy = topYield?.apy ?? null;
-  const gasGwei = gasPrice ? Math.round((gasPrice.standard / 1e9)) : null;
+  const gasGwei = gasPrice ? Math.round(Number(gasPrice.standard) / 1e9) : null;
 
   const usdcBalanceUsd = overview?.balances.find(b => b.tokenSymbol === 'USDC')?.usdValue ?? 0;
   const monthlyEstimate = apy ? Math.round((usdcBalanceUsd * apy) / 100 / 12) : 0;

@@ -5,10 +5,14 @@ import CalculatorSection from '../components/CalculatorSection';
 import StorySection from '../components/StorySection';
 import Footer from '../components/Footer';
 
-const Landing: React.FC = () => {
+interface LandingProps {
+  onNavigate?: (page: string) => void;
+}
+
+const Landing: React.FC<LandingProps> = ({ onNavigate }) => {
   return (
     <>
-      <Hero />
+      <Hero onNavigate={onNavigate} />
       <AppShowcase />
       <CalculatorSection />
       <StorySection />

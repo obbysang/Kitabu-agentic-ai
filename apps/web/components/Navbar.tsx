@@ -123,13 +123,15 @@ const Navbar: React.FC<NavbarProps> = React.memo(({ onNavigate, currentPage = 'h
               </div>
             ) : (
               <>
-                <button
-                  onClick={() => handleNav('docs')}
+                <a
+                  href={docsHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className={`text-sm font-medium flex items-center gap-1.5 transition-colors ${isLanding ? 'text-gray-300 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
                   aria-label="Open documentation"
                 >
                   Docs <ExternalLink size={14} opacity={0.7} />
-                </button>
+                </a>
 
               {!isLanding && (
                 <div className="flex items-center gap-3 pl-5 border-l border-slate-200">
@@ -208,14 +210,16 @@ const Navbar: React.FC<NavbarProps> = React.memo(({ onNavigate, currentPage = 'h
             </button>
           ))}
           <div className="h-px bg-white/10 my-4"></div>
-          <button
-            onClick={() => handleNav('docs')}
+          <a
+            href={docsHref}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-gray-400 text-left p-4 hover:text-white w-full flex justify-between items-center group"
             aria-label="Open documentation"
           >
             Documentation
             <ExternalLink size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-          </button>
+          </a>
           <ConnectKitButton.Custom>
             {({ isConnected, show, truncatedAddress, ensName }) => (
               <button

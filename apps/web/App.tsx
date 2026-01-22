@@ -26,7 +26,7 @@ const App: React.FC = () => {
       case 'docs':
         return <Docs />;
       default:
-        return <Landing />;
+        return <Landing onNavigate={(page) => setCurrentPage(page)} />;
     }
   };
 

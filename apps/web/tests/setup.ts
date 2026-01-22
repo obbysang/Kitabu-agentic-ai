@@ -1,3 +1,5 @@
+import '@testing-library/jest-dom'
+
 class MockFileReader {
   result: string = ''
   onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => any) | null = null
