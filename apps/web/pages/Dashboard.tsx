@@ -524,7 +524,7 @@ const Dashboard: React.FC = () => {
                                         contentStyle={{backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '12px', padding: '8px'}}
                                         itemStyle={{color: '#fff'}}
                                         cursor={{stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4'}}
-                                        formatter={(value: number) => [`$${value.toLocaleString()}`, 'Balance']}
+                                        formatter={(value: any) => [`$${Number(value).toLocaleString()}`, 'Balance']}
                                     />
                                     <Area type="monotone" dataKey="balance" stroke="#3B82F6" strokeWidth={2} fillOpacity={1} fill="url(#colorBalance)" />
                                 </AreaChart>

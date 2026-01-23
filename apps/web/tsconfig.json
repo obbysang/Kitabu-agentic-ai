@@ -16,12 +16,12 @@
     "allowJs": true,
     "jsx": "react-jsx",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./src/*"],
+      "*": ["./node_modules/*", "../../node_modules/*"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "types": ["vite/client"]
-  }
+  },
+  "include": ["src", "pages", "components", "lib", "hooks", "types", "tests"]
 }

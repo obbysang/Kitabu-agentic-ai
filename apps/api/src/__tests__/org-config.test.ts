@@ -9,7 +9,7 @@ const login = async (email: string, password: string) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  const data = await res.json();
+  const data = await res.json() as any;
   assert.strictEqual(res.status, 200);
   return data;
 };
@@ -19,7 +19,7 @@ describe('Org Config API', () => {
     const { token, user } = await login('admin@kitabu.finance', 'admin123');
     const res = await fetch(`${base}/orgs/me`, { headers: { Authorization: `Bearer ${token}` } });
     assert.strictEqual(res.status, 200);
-    const org = await res.json();
+    const org = await res.json() as any;
     assert.strictEqual(org.id, user.orgId);
   });
 
@@ -31,7 +31,7 @@ describe('Org Config API', () => {
       body: JSON.stringify({ targetUtilization: -1 }),
     });
     assert.strictEqual(res.status, 400);
-    const data = await res.json();
+    const data = await res.json() as any;
     assert.ok(data.error || data.code);
   });
 
@@ -43,7 +43,7 @@ describe('Org Config API', () => {
       body: JSON.stringify({ maxDailySpend: '2000000000000000000' }),
     });
     assert.strictEqual(res.status, 200);
-    const org = await res.json();
+    const org = await res.json() as any;
     assert.strictEqual(org.config.maxDailySpend, '2000000000000000000');
   });
 

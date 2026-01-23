@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@crypto.com/ai-agent-client": "^1.0.2",
-    "@crypto.com/facilitator-client": "^1.0.4",
+    "@crypto.com/facilitator-client": "github:crypto-com/facilitator-client-ts",
     "@modelcontextprotocol/sdk": "^1.25.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
