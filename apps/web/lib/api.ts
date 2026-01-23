@@ -91,21 +91,48 @@ export async function createSession(permissions: X402Permission[] = []): Promise
   return res
 }
 
-export async function createIntent(sessionId: string, type: 'payment', payload: Record<string, unknown>): Promise<X402Intent> {
-  const res = await fetch(`${BASE_URL}/x402/intents`, {
+export async function login(email: string, password: string): Promise<{ token: string; user: any }> {
+  const res = await fetch(`${BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  })
+  if (!res.ok) throw new Error('Login failed')
+  const data = await res.json()
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('AUTH_TOKEN', data.token)
+  }
+  return data
+}
+
+export async function ensureAuth() {
+  if (typeof localStorage !== 'undefined' && !localStorage.getItem('AUTH_TOKEN')) {
+    // Auto-login as admin for demo purposes if no token exists
+    try {
+      await login('admin@kitabu.finance', 'admin123');
+    } catch (e) {
+      console.error('Auto-login failed', e);
+    }
+  }
+}
+
+export async function createIntent(sessionId: string, type: 'payment', payload: Record<string, unknown>): Promise<X402Intent> {
+  const res = await request<X402Intent>('/x402/intents', {
+    method: 'POST',
     body: JSON.stringify({ sessionId, type, payload })
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || `Intent creation failed (${res.status})`)
-  }
-  return (await res.json()) as X402Intent
+  return res
 }
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${BASE_URL}${endpoint}`
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('AUTH_TOKEN') : null
+  let token = typeof localStorage !== 'undefined' ? localStorage.getItem('AUTH_TOKEN') : null
+  
+  if (!token) {
+    await ensureAuth();
+    token = typeof localStorage !== 'undefined' ? localStorage.getItem('AUTH_TOKEN') : null
+  }
+
   const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(options.headers as Record<string, string> || {}) }
   if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(url, { ...options, headers })
@@ -172,12 +199,10 @@ export async function approveInvoice(id: string, sessionId: string): Promise<{ i
 }
 
 export async function getIntent(id: string): Promise<X402Intent> {
-  const res = await fetch(`${BASE_URL}/x402/intents/${id}`)
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || 'Intent retrieval failed')
-  }
-  return (await res.json()) as X402Intent
+  const res = await request<X402Intent>(`/x402/intents/${id}`, {
+    method: 'GET'
+  })
+  return res
 }
 
 export async function getTreasuryOverview(): Promise<TreasuryOverview> {

@@ -64,11 +64,45 @@ const Dashboard: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const [adminOpen, setAdminOpen] = useState(false);
-  
-  const { data: org } = useQuery({
+
+  const { data: org, refetch: refetchOrg, error: orgError } = useQuery({
     queryKey: ['org', 'me'],
     queryFn: () => api.get<Organization>('/orgs/me'),
+    retry: 1,
   });
+  
+  // Auto-login for demo
+  useEffect(() => {
+    const token = localStorage.getItem('AUTH_TOKEN');
+    
+    const doLogin = () => {
+        fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'admin@kitabu.finance', password: 'admin123' })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.token) {
+                localStorage.setItem('AUTH_TOKEN', data.token);
+                queryClient.invalidateQueries({ queryKey: ['org'] });
+                refetchOrg();
+            }
+        })
+        .catch(err => console.error('Demo login failed', err));
+    };
+
+    if (!token) {
+        doLogin();
+    } else {
+        // Verify if token is still valid by checking if we can fetch org
+        if (orgError) {
+             console.log("Token invalid or server restarted, re-logging in...");
+             localStorage.removeItem('AUTH_TOKEN');
+             doLogin();
+        }
+    }
+  }, [queryClient, orgError, refetchOrg]);
 
   const { data: orgConfig, refetch: refetchConfig } = useQuery({
     queryKey: ['org', 'config', org?.id],
@@ -187,21 +221,37 @@ const Dashboard: React.FC = () => {
   const addressValid = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
 
   const saveSpendLimit = async () => {
-    if (!org) return;
+    if (!org) {
+        setAdminError("Organization profile not loaded. Attempting to refresh...");
+        refetchOrg();
+        return false;
+    }
     setSaving(true);
     setAdminError(null);
     try {
       await api.patch<Organization>(`/orgs/${org.id}/config`, { maxDailySpend: spendLimitInput, dualApprovalRequired, whitelistStrict, });
       await refetchConfig();
+      return true;
     } catch (e: any) {
       setAdminError(e.message);
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
+  const handleDone = async () => {
+    const success = await saveSpendLimit();
+    if (success) {
+      setAdminOpen(false);
+    }
+  };
+
   const addRecipient = async () => {
-    if (!org || !orgConfig) return;
+    if (!org || !orgConfig) {
+        setAdminError("Organization not loaded.");
+        return;
+    }
     if (!addressValid(newRecipient)) {
       setAdminError('Invalid address');
       return;
@@ -638,14 +688,14 @@ const Dashboard: React.FC = () => {
                 <div className="flex items-center gap-3 mt-2">
                   <input type="number" value={spendLimitInput} onChange={(e) => setSpendLimitInput(e.target.value)} className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
                   <span className="text-xs text-slate-500">USD</span>
-                  <button onClick={saveSpendLimit} disabled={saving || !org} className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50">Save</button>
+                  <button onClick={saveSpendLimit} disabled={saving} className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50">Save</button>
                 </div>
               </div>
               <div>
                 <div className="text-xs font-semibold text-gray-400 uppercase">Whitelisted Recipients</div>
                 <div className="flex items-center gap-2 mt-2">
                   <input type="text" placeholder="0x... or email" value={newRecipient} onChange={(e) => setNewRecipient(e.target.value)} className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
-                  <button onClick={addRecipient} disabled={saving || !org} className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50">Add</button>
+                  <button onClick={addRecipient} disabled={saving} className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50">Add</button>
                 </div>
                 <div className="mt-3 space-y-2">
                   {orgConfig?.whitelistedRecipients?.length ? orgConfig.whitelistedRecipients.map((addr) => (
@@ -664,7 +714,9 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
               <button onClick={() => setAdminOpen(false)} className="px-4 py-2 hover:bg-slate-200 rounded-lg text-slate-600 transition-colors">Close</button>
-              <button onClick={() => setAdminOpen(false)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Done</button>
+              <button onClick={handleDone} disabled={saving} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+                {saving ? 'Saving...' : 'Done'}
+              </button>
             </div>
           </div>
         </div>

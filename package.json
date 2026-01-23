@@ -9,9 +9,13 @@
     "sync:assets": "node scripts/sync-assets.mjs",
     "dev:web": "npm run sync:assets && npm run dev -w kitabu---ai-cfo-dashboard",
     "dev:api": "npm run dev -w @kitabu/api",
-    "build": "npm run build --workspaces"
+    "build": "npm run build --workspaces",
+    "prepare": "husky"
   },
   "dependencies": {
     "viem": "^2.44.4"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
   }
 }

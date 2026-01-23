@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layers, Key, Users, Check, ArrowRight, Wallet } from 'lucide-react';
+import { toast } from 'sonner';
 import gsap from 'gsap';
 import { useMutation } from '@tanstack/react-query';
 import { createSession, createIntent, X402Session } from '../lib/api';
@@ -21,7 +22,7 @@ const Rails: React.FC = () => {
 
   const mutationSession = useMutation({
     mutationFn: async () => {
-      const s = await createSession('org-1', 'user-1', []);
+      const s = await createSession([]);
       return s;
     },
     onSuccess: (s) => {
@@ -45,11 +46,19 @@ const Rails: React.FC = () => {
       return res;
     },
     onSuccess: (intent) => {
-      setSuccess(`Intent ${intent.id} created`);
+      const msg = `Intent ${intent.id} created`;
+      setSuccess(msg);
       setError(null);
+      toast.success('Batch Execution Successful', {
+        description: msg,
+      });
     },
     onError: (e: any) => {
-      setError(e.message || 'Execution failed');
+      const msg = e.message || 'Execution failed';
+      setError(msg);
+      toast.error('Batch Execution Failed', {
+        description: msg,
+      });
     }
   });
 

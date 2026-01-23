@@ -114,6 +114,10 @@ app.use(createRateLimiter({ windowMs: 60_000, max: 60 }));
 app.use('/auth', createAuthRouter(authService));
 app.use('/orgs', createOrgRouter(orgService, configService, authService));
 
+app.get('/', (req, res) => {
+  res.json({ message: 'Kitabu API is running', service: 'kitabu-api' });
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'kitabu-api' });
 });
@@ -163,6 +167,7 @@ app.post('/invoices/:id/parse', authMiddleware, async (req, res) => {
     }
 
     const parsedInvoice = await invoiceParsing.parseInvoice(invoice);
+    await invoiceIngestion.updateInvoice(parsedInvoice);
     
     res.json(parsedInvoice);
   } catch (error: any) {
@@ -185,6 +190,7 @@ app.post('/invoices/:id/approve', authMiddleware, async (req, res) => {
     }
 
     const result = await invoiceWorkflow.approveInvoice(invoice, req.user!.userId, sessionId);
+    await invoiceIngestion.updateInvoice(result.invoice);
     
     res.json(result);
   } catch (error: any) {

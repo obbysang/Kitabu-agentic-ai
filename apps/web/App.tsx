@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 import Navbar from './components/Navbar';
 import CookieConsent from './components/CookieConsent';
 import Landing from './pages/Landing';

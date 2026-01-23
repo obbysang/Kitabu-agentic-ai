@@ -9,6 +9,7 @@ export class VaultService {
   constructor() {
     if (!treasuryVaultAddress) {
       console.warn('TREASURY_VAULT_ADDRESS not set');
+      return;
     }
     
     // We initialize the contract with publicClient for read operations

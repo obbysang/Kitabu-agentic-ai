@@ -1,4 +1,5 @@
 import { createClient } from '@crypto.com/ai-agent-client';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Intent, AiResponse } from '../types.js';
 import { IntentSchema } from './intent.js';
 
@@ -47,11 +48,23 @@ Always prioritize safety. If a request is ambiguous, ask for clarification.
 
 export class AiAgentService {
   private client: any;
+  private geminiClient: GoogleGenerativeAI | null = null;
   private apiKey: string;
 
   constructor(apiKey: string, baseURL?: string, client?: any) {
     this.apiKey = apiKey;
     
+    // Initialize Gemini if key exists in env
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (geminiKey) {
+        try {
+            this.geminiClient = new GoogleGenerativeAI(geminiKey);
+            console.log('AiAgentService: Gemini Client Initialized');
+        } catch (e) {
+            console.warn('Failed to initialize Gemini Client:', e);
+        }
+    }
+
     if (client) {
         this.client = client;
     } else {
@@ -72,24 +85,60 @@ export class AiAgentService {
   }
 
   async processMessage(message: string, context?: any): Promise<AiResponse> {
-    // 1. Fallback to regex mock if no client or key is 'mock-key'
-    if (!this.client) {
-        console.log('AiAgentService: Using regex mock (No API Key or Client init failed).');
-        return this.mockProcessMessage(message);
+    // 1. Try Gemini first if available
+    if (this.geminiClient) {
+        try {
+            return await this.processWithGemini(message);
+        } catch (error) {
+            console.error('Gemini processing failed, falling back:', error);
+            // Fallthrough to other methods
+        }
     }
 
-    try {
-      console.log('Sending message to AI Agent:', message);
+    // 2. Try Crypto.com Client
+    if (this.client) {
+        try {
+            return await this.processWithCryptoCom(message, context);
+        } catch (error) {
+             console.error('Crypto.com Agent processing failed, falling back:', error);
+        }
+    }
 
-      // 2. Call SDK
+    // 3. No working AI provider
+    console.error('AiAgentService: No working AI provider found (Gemini or Crypto.com).');
+    throw new Error('AI Service Unavailable: Please configure GEMINI_API_KEY or Crypto.com Agent.');
+  }
+
+  private async processWithGemini(message: string): Promise<AiResponse> {
+      console.log('Sending message to Gemini...');
+      const model = this.geminiClient!.getGenerativeModel({ 
+          model: "gemini-1.5-flash",
+          systemInstruction: SYSTEM_PROMPT
+      });
+
+      const result = await model.generateContent(message);
+      const response = await result.response;
+      const text = response.text();
+      
+      const intent = this.extractIntent(text);
+
+      return {
+          message: text,
+          intent,
+          data: response
+      };
+  }
+
+  private async processWithCryptoCom(message: string, context?: any): Promise<AiResponse> {
+      console.log('Sending message to Crypto.com AI Agent:', message);
+
       const fullMessage = `${SYSTEM_PROMPT}\n\nUser: ${message}`;
       
       const response = await this.client.sendMessage({ 
           message: fullMessage,
-          context // Pass context if the SDK supports it
+          context 
       });
 
-      // 3. Parse Response
       const responseText = response.content || response.message || (typeof response === 'string' ? response : JSON.stringify(response));
       
       const intent = this.extractIntent(responseText);
@@ -99,12 +148,6 @@ export class AiAgentService {
         intent,
         data: response
       };
-
-    } catch (error) {
-      console.error('Error processing message with AI Agent:', error);
-      console.warn('Falling back to regex mock due to AI Agent error.');
-      return this.mockProcessMessage(message);
-    }
   }
 
   private extractIntent(text: string): Intent | undefined {
@@ -138,27 +181,5 @@ export class AiAgentService {
         console.warn('Failed to parse JSON from AI response:', e);
         return undefined;
       }
-  }
-
-  private mockProcessMessage(message: string): AiResponse {
-      if (message.toLowerCase().includes('pay') && message.toLowerCase().includes('usdc')) {
-         // simple regex to extract amount
-         const amountMatch = message.match(/(\d+)/);
-         const amount = amountMatch ? parseInt(amountMatch[0]) : 0;
-         
-         return {
-            message: `[MOCK] I have prepared a payment of ${amount} USDC.`,
-            intent: {
-              type: 'PAYMENT',
-              token: 'USDC',
-              amount: amount,
-              recipient: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e', // Mock recipient
-            }
-         };
-      }
-      
-      return {
-        message: '[MOCK] I received your message. Ask me to "pay 100 USDC" to test payment intents. (AI Agent not configured)',
-      };
   }
 }

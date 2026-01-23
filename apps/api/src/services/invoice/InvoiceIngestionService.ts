@@ -60,6 +60,15 @@ export class InvoiceIngestionService {
     return this.invoices.get(id);
   }
 
+  async updateInvoice(invoice: Invoice): Promise<void> {
+    if (this.invoices.has(invoice.id)) {
+      this.invoices.set(invoice.id, invoice);
+      console.log(`[InvoiceIngestion] Updated invoice ${invoice.id} status to ${invoice.status}`);
+    } else {
+      console.warn(`[InvoiceIngestion] Attempted to update non-existent invoice ${invoice.id}`);
+    }
+  }
+
   async listInvoices(orgId: string): Promise<Invoice[]> {
     return Array.from(this.invoices.values()).filter(
       (inv) => inv.metadata.orgId === orgId

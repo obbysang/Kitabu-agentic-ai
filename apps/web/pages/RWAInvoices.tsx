@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FileText, Upload, CheckCircle, Loader2, ArrowRight, AlertTriangle } from 'lucide-react';
 import gsap from 'gsap';
 import { useMutation } from '@tanstack/react-query';
-import { uploadInvoice, parseInvoice, approveInvoice, ExtractedInvoiceData, Invoice } from '../lib/api';
+import { uploadInvoice, parseInvoice, approveInvoice, ExtractedInvoiceData, Invoice, ensureAuth, createSession } from '../lib/api';
 
 const RWAInvoices: React.FC = () => {
   const [dragActive, setDragActive] = useState(false);
@@ -15,6 +15,7 @@ const RWAInvoices: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    ensureAuth();
     gsap.fromTo('.anim-card',
       { y: 20, opacity: 0 },
       { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: 'power2.out' }
@@ -31,23 +32,12 @@ const RWAInvoices: React.FC = () => {
     }
   };
 
-  const createSession = async () => {
-    const res = await fetch(((import.meta.env.VITE_API_URL as string) || 'http://localhost:3000') + '/x402/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orgId: 'org-1', userId: 'user-1', permissions: [] })
-    })
-    if (!res.ok) throw new Error('Session creation failed')
-    const data = await res.json()
-    return data.sessionId as string
-  }
-
   const onFileSelected = async (file: File) => {
     setError(null)
     setStatus('uploading')
     setProgress(0)
     try {
-      const inv = await uploadInvoice(file, 'user-1', 'org-1', p => setProgress(p))
+      const inv = await uploadInvoice(file, p => setProgress(p))
       setInvoice(inv)
       setStatus('parsing')
       const parsed = await parseInvoice(inv.id)
@@ -70,6 +60,18 @@ const RWAInvoices: React.FC = () => {
     }
   };
 
+  const resetFlow = () => {
+    setStatus('idle');
+    setInvoice(null);
+    setForm(null);
+    setError(null);
+    setProgress(0);
+    mutationApprove.reset();
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  };
+
   const validateForm = (data: ExtractedInvoiceData | null) => {
     if (!data) return false
     if (!data.destinationAddress || !data.destinationAddress.startsWith('0x')) return false
@@ -83,11 +85,17 @@ const RWAInvoices: React.FC = () => {
     mutationFn: async () => {
       if (!invoice || !form) throw new Error('No invoice')
       if (!validateForm(form)) throw new Error('Incomplete or invalid data')
-      const sid = sessionId || await createSession()
-      setSessionId(sid)
+      
+      let sid = sessionId
+      if (!sid) {
+        const session = await createSession()
+        sid = session.sessionId
+        setSessionId(sid)
+      }
+      
       const updated: Invoice = { ...invoice, extractedData: form }
       setInvoice(updated)
-      const res = await approveInvoice(updated.id, 'user-1', sid)
+      const res = await approveInvoice(updated.id, sid!)
       return res
     },
     onError: (e: any) => {
@@ -160,7 +168,39 @@ const RWAInvoices: React.FC = () => {
                 </div>
 
                 <div className="p-10 bg-slate-50 flex flex-col justify-center">
-                    {status === 'complete' && form ? (
+                    {mutationApprove.isSuccess ? (
+                        <div className="text-center space-y-6 animate-fade-in-up">
+                            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600 mb-4">
+                                <CheckCircle size={40} />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-bold text-slate-900 mb-2">Invoice Approved</h3>
+                                <p className="text-gray-500">
+                                    Payment intent has been created and scheduled for execution via x402.
+                                </p>
+                            </div>
+                            
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-left">
+                                {form && (
+                                    <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                                        <span className="text-sm font-semibold text-slate-900">{form.vendorName || 'Unknown Vendor'}</span>
+                                        <span className="text-xs text-gray-500">{form.invoiceId}</span>
+                                    </div>
+                                )}
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Intent ID</div>
+                                <div className="font-mono text-sm text-slate-900 break-all bg-slate-50 p-2 rounded border border-slate-100">
+                                    {mutationApprove.data?.intent?.id}
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={resetFlow}
+                                className="w-full py-3 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors"
+                            >
+                                Process Another Invoice
+                            </button>
+                        </div>
+                    ) : status === 'complete' && form ? (
                         <div className="space-y-6 animate-fade-in-up">
                             <div>
                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Extracted Details</h3>
@@ -233,12 +273,6 @@ const RWAInvoices: React.FC = () => {
                                 Submit for x402 Settlement <ArrowRight size={16} />
                             </button>
                             {mutationApprove.isPending && <p className="text-blue-600 text-sm">Submitting</p>}
-                            {mutationApprove.isSuccess && (
-                              <div className="text-sm text-green-700">
-                                <div>Intent created</div>
-                                <div className="font-mono">{mutationApprove.data.intent.id}</div>
-                              </div>
-                            )}
                             {error && <p className="text-red-600 text-sm">{error}</p>}
                             </div>
                         </div>
