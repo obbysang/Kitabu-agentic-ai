@@ -40,6 +40,7 @@ import { fileURLToPath } from 'url';
 import { metrics } from './middleware/metrics.js';
 import { createRateLimiter } from './middleware/rateLimit.js';
 import { errorHandler } from './middleware/error.js';
+import { createAuthMiddleware } from './middleware/auth.js';
 
 dotenv.config();
 
@@ -53,6 +54,9 @@ const port = process.env.PORT || 3000;
 const orgService = new OrgService();
 const authService = new AuthService(orgService);
 const configService = new ConfigService(orgService);
+
+// Initialize Middleware
+const authMiddleware = createAuthMiddleware(authService);
 
 // Initialize x402 Services
 const x402Client = process.env.TREASURY_PRIVATE_KEY ? new X402Client() : new MockX402Client();
@@ -120,20 +124,22 @@ app.get('/metrics', (req, res) => {
 // --- Invoice Routes ---
 
 // Upload Invoice (Simulated with JSON body for simplicity)
-app.post('/invoices/upload', async (req, res) => {
+app.post('/invoices/upload', authMiddleware, async (req, res) => {
   try {
-    const { fileBase64, fileName, userId, orgId, mimeType } = req.body;
+    const { fileBase64, fileName, mimeType } = req.body;
     
     if (!fileBase64 || !fileName) {
       return res.status(400).json({ error: 'Missing file content or name' });
     }
 
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+
     const buffer = Buffer.from(fileBase64, 'base64');
     const invoice = await invoiceIngestion.ingestInvoice(
       buffer,
       fileName,
-      userId || 'user-1',
-      orgId || 'org-1',
+      req.user.userId,
+      req.user.orgId,
       mimeType || 'application/pdf'
     );
 
@@ -144,11 +150,16 @@ app.post('/invoices/upload', async (req, res) => {
 });
 
 // Trigger Parsing (AI Extraction)
-app.post('/invoices/:id/parse', async (req, res) => {
+app.post('/invoices/:id/parse', authMiddleware, async (req, res) => {
   try {
-    const invoice = await invoiceIngestion.getInvoice(req.params.id);
+    const invoice = await invoiceIngestion.getInvoice(req.params.id as string);
     if (!invoice) {
       return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    // Ensure user belongs to the same org
+    if (req.user?.orgId !== invoice.metadata.orgId) {
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
     const parsedInvoice = await invoiceParsing.parseInvoice(invoice);
@@ -160,16 +171,20 @@ app.post('/invoices/:id/parse', async (req, res) => {
 });
 
 // Approve Invoice & Create Payment Intent
-app.post('/invoices/:id/approve', async (req, res) => {
+app.post('/invoices/:id/approve', authMiddleware, async (req, res) => {
   try {
-    const { approverId, sessionId } = req.body;
-    const invoice = await invoiceIngestion.getInvoice(req.params.id);
+    const { sessionId } = req.body;
+    const invoice = await invoiceIngestion.getInvoice(req.params.id as string);
     
     if (!invoice) {
       return res.status(404).json({ error: 'Invoice not found' });
     }
 
-    const result = await invoiceWorkflow.approveInvoice(invoice, approverId, sessionId);
+    if (req.user?.orgId !== invoice.metadata.orgId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const result = await invoiceWorkflow.approveInvoice(invoice, req.user!.userId, sessionId);
     
     res.json(result);
   } catch (error: any) {
@@ -178,14 +193,22 @@ app.post('/invoices/:id/approve', async (req, res) => {
 });
 
 // Get Invoice
-app.get('/invoices/:id', async (req, res) => {
-  const invoice = await invoiceIngestion.getInvoice(req.params.id);
+app.get('/invoices/:id', authMiddleware, async (req, res) => {
+  const invoice = await invoiceIngestion.getInvoice(req.params.id as string);
   if (!invoice) return res.status(404).json({ error: 'Not found' });
+  
+  if (req.user?.orgId !== invoice.metadata.orgId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  
   res.json(invoice);
 });
 
 // List Invoices for Org
-app.get('/invoices/org/:orgId', async (req, res) => {
+app.get('/invoices/org/:orgId', authMiddleware, async (req, res) => {
+  if (req.user?.orgId !== req.params.orgId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
   const invoices = await invoiceIngestion.listInvoices(req.params.orgId);
   res.json(invoices);
 });
@@ -196,10 +219,12 @@ app.use('/market', marketRouter);
 // --- x402 Routes ---
 
 // Create Session
-app.post('/x402/sessions', async (req, res) => {
+app.post('/x402/sessions', authMiddleware, async (req, res) => {
   try {
-    const { orgId, userId, permissions } = req.body;
+    const { permissions } = req.body;
     
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+
     // Default policy mapping for demo
     const policy = {
       dailySpendLimit: '1000000000000000000', // 1 ETH/CRO
@@ -212,8 +237,8 @@ app.post('/x402/sessions', async (req, res) => {
     const finalPermissions = [...(permissions || []), ...policyPermissions];
 
     const session = await sessionManager.initializeSession({
-      orgId,
-      userId,
+      orgId: req.user.orgId,
+      userId: req.user.userId,
       expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24h
       permissions: finalPermissions,
     });
@@ -225,7 +250,7 @@ app.post('/x402/sessions', async (req, res) => {
 });
 
 // Create and Execute Intent
-app.post('/x402/intents', async (req, res) => {
+app.post('/x402/intents', authMiddleware, async (req, res) => {
   try {
     const { sessionId, type, payload } = req.body;
     
@@ -243,9 +268,9 @@ app.post('/x402/intents', async (req, res) => {
 });
 
 // Get Intent Status
-app.get('/x402/intents/:id', async (req, res) => {
+app.get('/x402/intents/:id', authMiddleware, async (req, res) => {
   try {
-    const intent = await orchestrator.getIntent(req.params.id);
+    const intent = await orchestrator.getIntent(req.params.id as string);
     if (!intent) {
       return res.status(404).json({ error: 'Intent not found' });
     }
@@ -258,7 +283,7 @@ app.get('/x402/intents/:id', async (req, res) => {
 // --- Yield / DeFi Routes ---
 
 // Deploy Idle Funds
-app.post('/yield/deploy', async (req, res) => {
+app.post('/yield/deploy', authMiddleware, async (req, res) => {
   try {
     const { amountUSDC, userAddress, strategyId } = req.body;
     if (!amountUSDC || !userAddress) {
@@ -278,7 +303,7 @@ app.post('/yield/deploy', async (req, res) => {
 });
 
 // Exit Yield
-app.post('/yield/exit', async (req, res) => {
+app.post('/yield/exit', authMiddleware, async (req, res) => {
   try {
     const { amountNeededUSDC, userAddress, strategyId } = req.body;
     if (!amountNeededUSDC || !userAddress) {
@@ -299,10 +324,12 @@ app.post('/yield/exit', async (req, res) => {
 
 // --- AI Agent Routes ---
 
-app.post('/agent/chat', async (req, res) => {
+app.post('/agent/chat', authMiddleware, async (req, res) => {
   try {
-    const { message, userId, context } = req.body;
+    const { message, context } = req.body;
     
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
@@ -339,7 +366,7 @@ app.post('/agent/chat', async (req, res) => {
 
     // 3. Log to History
     await historyService.addRecord(
-      userId || 'anonymous',
+      req.user.userId,
       message,
       aiResponse.intent
     );
@@ -354,8 +381,11 @@ app.post('/agent/chat', async (req, res) => {
   }
 });
 
-app.get('/agent/history/:userId', async (req, res) => {
+app.get('/agent/history/:userId', authMiddleware, async (req, res) => {
   try {
+    if (req.user?.userId !== req.params.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
     const history = await historyService.getHistory(req.params.userId);
     res.json(history);
   } catch (error: any) {
@@ -365,7 +395,7 @@ app.get('/agent/history/:userId', async (req, res) => {
 
 // --- Treasury Dashboard Routes ---
 
-app.get('/treasury/overview', async (req, res) => {
+app.get('/treasury/overview', authMiddleware, async (req, res) => {
   try {
     const overview = await treasuryService.getOverview();
     res.json(overview);
@@ -374,7 +404,7 @@ app.get('/treasury/overview', async (req, res) => {
   }
 });
 
-app.get('/treasury/vault', async (req, res) => {
+app.get('/treasury/vault', authMiddleware, async (req, res) => {
   try {
     // Access the vault service via treasury service or directly if exposed
     // Since we didn't expose vaultService publicly in TreasuryService, we can instantiate one or expose it.
@@ -391,7 +421,7 @@ app.get('/treasury/vault', async (req, res) => {
   }
 });
 
-app.get('/treasury/activity', async (req, res) => {
+app.get('/treasury/activity', authMiddleware, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = parseInt(req.query.offset as string) || 0;
@@ -402,7 +432,7 @@ app.get('/treasury/activity', async (req, res) => {
   }
 });
 
-app.get('/treasury/history', async (req, res) => {
+app.get('/treasury/history', authMiddleware, async (req, res) => {
   try {
     const days = parseInt(req.query.days as string) || 30;
     const history = await reportingService.getHistoricalBalances(days);

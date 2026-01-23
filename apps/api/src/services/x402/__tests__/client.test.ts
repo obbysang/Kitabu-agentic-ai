@@ -8,7 +8,7 @@ describe('X402Client', async () => {
     generatePaymentRequirements: mock.fn(() => ({ reqs: 'mock-reqs' })),
     buildVerifyRequest: mock.fn(() => ({ body: 'mock-body' })),
     verifyPayment: mock.fn(async () => ({ isValid: true })),
-    settlePayment: mock.fn(async () => ({ txHash: '0x1234567890abcdef' })),
+    settlePayment: mock.fn(async () => ({ txHash: '0x1234567890abcdef' } as any)),
   };
 
   const MockFacilitator = class {

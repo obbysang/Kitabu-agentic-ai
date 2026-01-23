@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Navbar from './components/Navbar';
+import CookieConsent from './components/CookieConsent';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Intelligence from './pages/Intelligence';
@@ -40,6 +41,7 @@ const App: React.FC = () => {
           />
         )}
         {renderPage()}
+        <CookieConsent />
       </div>
     </QueryClientProvider>
   );

@@ -83,17 +83,12 @@ export interface X402Intent {
   updatedAt: number
 }
 
-export async function createSession(orgId: string, userId: string, permissions: X402Permission[] = []): Promise<X402Session> {
-  const res = await fetch(`${BASE_URL}/x402/sessions`, {
+export async function createSession(permissions: X402Permission[] = []): Promise<X402Session> {
+  const res = await request<X402Session>('/x402/sessions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ orgId, userId, permissions })
+    body: JSON.stringify({ permissions })
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || `Session creation failed (${res.status})`)
-  }
-  return (await res.json()) as X402Session
+  return res
 }
 
 export async function createIntent(sessionId: string, type: 'payment', payload: Record<string, unknown>): Promise<X402Intent> {
@@ -135,7 +130,7 @@ function toBase64(file: File): Promise<string> {
   })
 }
 
-export async function uploadInvoice(file: File, userId: string, orgId: string, onProgress?: (p: number) => void): Promise<Invoice> {
+export async function uploadInvoice(file: File, onProgress?: (p: number) => void): Promise<Invoice> {
   const allowed = ['application/pdf', 'image/jpeg', 'image/png']
   if (!allowed.includes(file.type)) {
     throw new Error('Unsupported file type')
@@ -146,50 +141,34 @@ export async function uploadInvoice(file: File, userId: string, orgId: string, o
   if (onProgress) onProgress(10)
   const fileBase64 = await toBase64(file)
   if (onProgress) onProgress(40)
-  const res = await fetch(`${BASE_URL}/invoices/upload`, {
+  
+  // Use request() helper which handles auth headers automatically
+  const data = await request<Invoice>('/invoices/upload', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       fileBase64,
       fileName: file.name,
-      userId,
-      orgId,
       mimeType: file.type,
     }),
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || `Upload failed (${res.status})`)
-  }
-  if (onProgress) onProgress(80)
-  const data = (await res.json()) as Invoice
+  
   if (onProgress) onProgress(100)
   return data
 }
 
 export async function parseInvoice(id: string): Promise<Invoice> {
-  const res = await fetch(`${BASE_URL}/invoices/${id}/parse`, {
+  const res = await request<Invoice>(`/invoices/${id}/parse`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || `Parsing failed (${res.status})`)
-  }
-  return (await res.json()) as Invoice
+  return res
 }
 
-export async function approveInvoice(id: string, approverId: string, sessionId: string): Promise<{ invoice: Invoice; intent: X402Intent }> {
-  const res = await fetch(`${BASE_URL}/invoices/${id}/approve`, {
+export async function approveInvoice(id: string, sessionId: string): Promise<{ invoice: Invoice; intent: X402Intent }> {
+  const res = await request<{ invoice: Invoice; intent: X402Intent }>(`/invoices/${id}/approve`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ approverId, sessionId }),
+    body: JSON.stringify({ sessionId }),
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || `Approval failed (${res.status})`)
-  }
-  return (await res.json()) as { invoice: Invoice; intent: X402Intent }
+  return res
 }
 
 export async function getIntent(id: string): Promise<X402Intent> {
