@@ -64,8 +64,18 @@ const Dashboard: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const [adminOpen, setAdminOpen] = useState(false);
-  const [org, setOrg] = useState<Organization | null>(null);
-  const [orgConfig, setOrgConfig] = useState<OrgConfig | null>(null);
+  
+  const { data: org } = useQuery({
+    queryKey: ['org', 'me'],
+    queryFn: () => api.get<Organization>('/orgs/me'),
+  });
+
+  const { data: orgConfig, refetch: refetchConfig } = useQuery({
+    queryKey: ['org', 'config', org?.id],
+    queryFn: () => api.get<OrgConfig>(`/orgs/${org!.id}/config`),
+    enabled: !!org?.id,
+  });
+
   const [spendLimitInput, setSpendLimitInput] = useState<string>('');
   const [newRecipient, setNewRecipient] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -137,7 +147,7 @@ const Dashboard: React.FC = () => {
   ]);
 
   const dailySpend = 3240; // TODO: Fetch from config/safety endpoint
-  const dailyLimit = 5000;
+  const dailyLimit = orgConfig ? parseInt(orgConfig.maxDailySpend) : 5000;
 
   const treasuryData = overview?.balances.map(b => ({
     name: b.tokenSymbol,
@@ -167,23 +177,12 @@ const Dashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const loadAdminData = async () => {
-      if (!adminOpen) return;
-      setAdminError(null);
-      try {
-        const me = await api.get<Organization>('/orgs/me');
-        setOrg(me);
-        const cfg = await api.get<OrgConfig>(`/orgs/${me.id}/config`);
-        setOrgConfig(cfg);
-        setSpendLimitInput(cfg.maxDailySpend);
-        setDualApprovalRequired(Boolean((cfg as any).dualApprovalRequired));
-        setWhitelistStrict(Boolean((cfg as any).whitelistStrict));
-      } catch (e: any) {
-        setAdminError(e.message || 'Failed to load admin data');
-      }
-    };
-    loadAdminData();
-  }, [adminOpen]);
+    if (adminOpen && orgConfig) {
+      setSpendLimitInput(orgConfig.maxDailySpend);
+      setDualApprovalRequired(Boolean(orgConfig.dualApprovalRequired));
+      setWhitelistStrict(Boolean(orgConfig.whitelistStrict));
+    }
+  }, [adminOpen, orgConfig]);
 
   const addressValid = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
 
@@ -192,8 +191,8 @@ const Dashboard: React.FC = () => {
     setSaving(true);
     setAdminError(null);
     try {
-      const updated = await api.patch<Organization>(`/orgs/${org.id}/config`, { maxDailySpend: spendLimitInput, dualApprovalRequired, whitelistStrict, });
-      setOrgConfig(updated.config);
+      await api.patch<Organization>(`/orgs/${org.id}/config`, { maxDailySpend: spendLimitInput, dualApprovalRequired, whitelistStrict, });
+      await refetchConfig();
     } catch (e: any) {
       setAdminError(e.message);
     } finally {
@@ -211,8 +210,8 @@ const Dashboard: React.FC = () => {
     setAdminError(null);
     try {
       const updatedList = [...orgConfig.whitelistedRecipients, newRecipient];
-      const updated = await api.patch<Organization>(`/orgs/${org.id}/config`, { whitelistedRecipients: updatedList });
-      setOrgConfig(updated.config);
+      await api.patch<Organization>(`/orgs/${org.id}/config`, { whitelistedRecipients: updatedList });
+      await refetchConfig();
       setNewRecipient('');
     } catch (e: any) {
       setAdminError(e.message);
@@ -227,8 +226,8 @@ const Dashboard: React.FC = () => {
     setAdminError(null);
     try {
       const updatedList = orgConfig.whitelistedRecipients.filter(a => a !== addr);
-      const updated = await api.patch<Organization>(`/orgs/${org.id}/config`, { whitelistedRecipients: updatedList });
-      setOrgConfig(updated.config);
+      await api.patch<Organization>(`/orgs/${org.id}/config`, { whitelistedRecipients: updatedList });
+      await refetchConfig();
     } catch (e: any) {
       setAdminError(e.message);
     } finally {

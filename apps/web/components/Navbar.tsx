@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { ArrowRight, Menu, X, Bot, Bell, ChevronDown, ExternalLink } from 'lucide-react'
+import { ArrowRight, Menu, X, Bot, Bell, ChevronDown } from 'lucide-react'
 import { ConnectKitButton } from 'connectkit'
+import { Notifications, Notification } from './Notifications'
+import { useNotifications } from '../hooks/useNotifications'
 
 interface NavbarProps {
   onNavigate?: (page: 'home' | 'dashboard' | 'intelligence' | 'rails' | 'rwa' | 'docs') => void
@@ -15,6 +17,13 @@ const Navbar: React.FC<NavbarProps> = React.memo(({ onNavigate, currentPage = 'h
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const firstMobileItemRef = useRef<HTMLButtonElement | null>(null)
 
+  // Notifications state
+  const [showNotifications, setShowNotifications] = useState(false)
+  const notificationRef = useRef<HTMLDivElement>(null)
+  
+  // Use real-time notifications hook
+  const { notifications, markAsRead, clearAll, isConnected } = useNotifications()
+
   const isLanding = currentPage === 'home'
 
   useEffect(() => {
@@ -27,17 +36,34 @@ const Navbar: React.FC<NavbarProps> = React.memo(({ onNavigate, currentPage = 'h
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileMenuOpen(false)
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false)
+        setShowNotifications(false)
+      }
     }
-    if (mobileMenuOpen) {
-      window.addEventListener('keydown', onKey)
-    }
+    window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [mobileMenuOpen])
+  }, [])
 
   useEffect(() => {
     if (mobileMenuOpen && firstMobileItemRef.current) firstMobileItemRef.current.focus()
   }, [mobileMenuOpen])
+
+  // Close notifications when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false)
+      }
+    }
+
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showNotifications])
 
   const handleNav = useCallback(
     (page: 'home' | 'dashboard' | 'intelligence' | 'rails' | 'rwa' | 'docs') => {
@@ -49,6 +75,8 @@ const Navbar: React.FC<NavbarProps> = React.memo(({ onNavigate, currentPage = 'h
     },
     [onNavigate]
   )
+
+  const unreadCount = notifications.filter(n => !n.read).length
 
   const navItems = useMemo(
     () => [
@@ -123,22 +151,38 @@ const Navbar: React.FC<NavbarProps> = React.memo(({ onNavigate, currentPage = 'h
               </div>
             ) : (
               <>
-                <a
-                  href={docsHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => handleNav('docs')}
                   className={`text-sm font-medium flex items-center gap-1.5 transition-colors ${isLanding ? 'text-gray-300 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
                   aria-label="Open documentation"
                 >
-                  Docs <ExternalLink size={14} opacity={0.7} />
-                </a>
+                  Docs
+                </button>
+
+                <div className="relative" ref={notificationRef}>
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className={`p-2 rounded-full transition-colors relative group ${isLanding ? 'text-gray-300 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'} ${showNotifications ? (isLanding ? 'bg-white/10' : 'bg-blue-50 text-blue-600') : ''}`}
+                    aria-label="Notifications"
+                    aria-expanded={showNotifications}
+                  >
+                    <Bell size={20} />
+                    {unreadCount > 0 && (
+                      <span className={`absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 ${isLanding ? 'border-black' : 'border-white'}`}></span>
+                    )}
+                  </button>
+                  {showNotifications && (
+                    <Notifications 
+                      notifications={notifications}
+                      onClose={() => setShowNotifications(false)}
+                      onMarkAsRead={markAsRead}
+                      onClearAll={clearAll}
+                    />
+                  )}
+                </div>
 
               {!isLanding && (
                 <div className="flex items-center gap-3 pl-5 border-l border-slate-200">
-                  <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors relative group" aria-label="Notifications">
-                    <Bell size={20} />
-                    <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                  </button>
                   <ConnectKitButton.Custom>
                     {({ isConnected, show, truncatedAddress, ensName }) => (
                       <button
@@ -210,16 +254,13 @@ const Navbar: React.FC<NavbarProps> = React.memo(({ onNavigate, currentPage = 'h
             </button>
           ))}
           <div className="h-px bg-white/10 my-4"></div>
-          <a
-            href={docsHref}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => handleNav('docs')}
             className="text-gray-400 text-left p-4 hover:text-white w-full flex justify-between items-center group"
             aria-label="Open documentation"
           >
             Documentation
-            <ExternalLink size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-          </a>
+          </button>
           <ConnectKitButton.Custom>
             {({ isConnected, show, truncatedAddress, ensName }) => (
               <button
