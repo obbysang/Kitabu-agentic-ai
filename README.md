@@ -3,7 +3,7 @@
 Kitabu is an AI-native, autonomous treasury management platform built for the Cronos ecosystem. It enables DAOs, startups, and Web3 organizations to manage payroll, vendor payments, yield optimization, and compliance workflows using natural language, executed safely and autonomously via **x402 agentic payment rails**.
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" alt="Kitabu Dashboard" width="100%" />
+  <img src="https://github.com/obbysang/Kitabu-agentic-ai/blob/main/assets/Screenshot%202026-01-23%20072501.png" alt="Kitabu Dashboard" width="100%" />
 </div>
 
 ## 🚀 Mission
